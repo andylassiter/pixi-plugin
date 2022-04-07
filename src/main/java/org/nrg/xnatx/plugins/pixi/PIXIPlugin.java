@@ -3,11 +3,10 @@ package org.nrg.xnatx.plugins.pixi;
 import lombok.extern.slf4j.Slf4j;
 import org.nrg.framework.annotations.XnatDataModel;
 import org.nrg.framework.annotations.XnatPlugin;
-import org.nrg.xdat.om.PixiAnimaldemographicdata;
-import org.nrg.xdat.om.PixiCalipermeasurementdata;
-import org.nrg.xdat.om.PixiDrugtherapydata;
-import org.nrg.xdat.om.PixiWeightdata;
+import org.nrg.xdat.om.*;
+import org.nrg.xnat.restlet.actions.importer.ImporterHandlerPackages;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 
 @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -29,7 +28,15 @@ import org.springframework.context.annotation.ComponentScan;
                           @XnatDataModel(value = PixiCalipermeasurementdata.SCHEMA_ELEMENT_NAME,
                                          singular = "Caliper Measurement",
                                          plural = "Caliper Measurements",
-                                         code = "CM")
+                                         code = "CM"),
+                          @XnatDataModel(value = PixiBlisessiondata.SCHEMA_ELEMENT_NAME,
+                                         singular = "BLI Session",
+                                         plural = "BLI Sessions",
+                                         code = "BLI"),
+                          @XnatDataModel(value = PixiBliscandata.SCHEMA_ELEMENT_NAME,
+                                         singular = "BLI Scan",
+                                         plural = "BLI Scans",
+                                         code = "BLIScan")
                           })
 @ComponentScan({"org.nrg.xnatx.plugins.pixi.entities",
                 "org.nrg.xnatx.plugins.pixi.repositories",
@@ -42,4 +49,10 @@ public class PIXIPlugin {
 
     @Autowired
     public PIXIPlugin() { }
+
+    @Bean
+    public ImporterHandlerPackages pixiImporterHandlerPackages() {
+        return new ImporterHandlerPackages("org.nrg.xnatx.plugins.pixi.bli.importer");
+    }
+
 }

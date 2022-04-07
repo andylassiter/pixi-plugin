@@ -11,6 +11,9 @@
     <xs:element name="Weight" type="pixi:weightData"/>
     <xs:element name="DrugTherapy" type="pixi:drugTherapyData"/>
     <xs:element name="CaliperMeasurement" type="pixi:caliperMeasurementData"/>
+    <xs:element name="BliSession" type="pixi:bliSessionData"/>
+    <xs:element name="BliScan" type="pixi:bliScanData"/>
+
     <xs:complexType name="animalDemographicData">
         <xs:annotation>
             <xs:appinfo>
@@ -275,4 +278,43 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
+
+    <xs:complexType name="bliSessionData">
+        <xs:complexContent>
+            <xs:extension base="xnat:imageSessionData">
+                <xs:sequence minOccurs="0">
+                    <xs:element name="luciferin" type="xs:decimal" minOccurs="0">
+                        <xs:annotation>
+                            <xs:documentation>Amount of luciferin injected.</xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                    <xs:element name="luciferinInjectionTime" type="xs:dateTime" minOccurs="0">
+                        <xs:annotation>
+                            <xs:documentation>The datetime when the luciferin was injected.</xs:documentation>
+                        </xs:annotation>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="bliScanData">
+        <xs:complexContent>
+            <xs:extension base="xnat:imageScanData">
+                <xs:sequence minOccurs="0">
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="luminescenceData">
+        <xs:complexContent>
+            <xs:extension base="xnat:imageAssessorData">
+                <xs:sequence>
+                    <xs:element name="luminescence" type="xs:decimal"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
 </xs:schema>
