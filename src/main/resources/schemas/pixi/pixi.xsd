@@ -280,6 +280,9 @@
     </xs:complexType>
 
     <xs:complexType name="bliSessionData">
+        <xs:annotation>
+            <xs:documentation>An event in which BLI scans are obtained on a subject</xs:documentation>
+        </xs:annotation>
         <xs:complexContent>
             <xs:extension base="xnat:imageSessionData">
                 <xs:sequence minOccurs="0">

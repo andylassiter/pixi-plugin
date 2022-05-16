@@ -25,19 +25,6 @@ public class BliSessionBuilder extends SessionBuilder {
         this.sessionDir = sessionDir;
     }
 
-//    // TODO buildCustomSession(...) does not support these constructors
-//    protected BliSessionBuilder(File sessionDir, String desc, Writer writer, File file) {
-//        super(sessionDir, desc, writer, file);
-//    }
-//
-//    protected BliSessionBuilder(File sessionDir, String desc, Writer writer) {
-//        super(sessionDir, desc, writer);
-//    }
-//
-//    protected BliSessionBuilder(File sessionDir, String desc, File file) {
-//        super(sessionDir, desc, file);
-//    }
-
     @Override
     public String getSessionInfo() {
         // TODO

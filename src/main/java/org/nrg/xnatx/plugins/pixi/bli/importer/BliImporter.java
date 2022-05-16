@@ -76,8 +76,6 @@ public class BliImporter extends ImporterHandlerA {
 
     @Override
     public List<String> call() throws ClientException, ServerException {
-        // TODO add filter for mac os files
-
         // Project ID is required
         if (!params.containsKey(URIManager.PROJECT_ID)) {
             ClientException e = new ClientException("PROJECT_ID is a required parameter for BLI session uploads.");
