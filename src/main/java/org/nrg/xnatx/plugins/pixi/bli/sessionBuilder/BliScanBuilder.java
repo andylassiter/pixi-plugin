@@ -1,30 +1,32 @@
 package org.nrg.xnatx.plugins.pixi.bli.sessionBuilder;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.axis.utils.StringUtils;
+import org.nrg.xdat.XDAT;
 import org.nrg.xdat.bean.*;
+import org.nrg.xnatx.plugins.pixi.bli.helpers.AnalyzedClickInfoHelper;
+import org.nrg.xnatx.plugins.pixi.bli.models.AnalyzedClickInfo;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class BliScanBuilder implements Callable<XnatImagescandataBean> {
 
     private final Path scanDir;
     private final PixiBliscandataBean bliScan;
+    private AnalyzedClickInfoHelper analyzedClickInfoHelper;
 
     public BliScanBuilder(final Path scanDir) {
         this.scanDir = scanDir;
         this.bliScan = new PixiBliscandataBean();
+        this.analyzedClickInfoHelper = XDAT.getContextService().getBean(AnalyzedClickInfoHelper.class);
     }
 
     @Override
@@ -36,7 +38,19 @@ public class BliScanBuilder implements Callable<XnatImagescandataBean> {
         bliScan.setId(id);
         bliScan.setType("BLI");
 
-        parseAnalyzedClickInfo();
+        AnalyzedClickInfo analyzedClickInfo = analyzedClickInfoHelper.readJson(scanDir.resolve("AnalyzedClickInfo.json"));
+
+        bliScan.setOperator(analyzedClickInfo.getUserLabelNameSet().getUser());
+
+        if (StringUtils.isEmpty(analyzedClickInfo.getClickNumber().getClickNumber())) {
+            log.info("Unable to find a UID in AnalyzedClickInfo.txt for scan {}. Will generate a random UID instead.", bliScan.getId());
+            bliScan.setUid(UUID.randomUUID().toString());
+        } else {
+            bliScan.setUid(analyzedClickInfo.getClickNumber().getClickNumber());
+        }
+
+        // Set scan datetime
+        bliScan.setStartDate(analyzedClickInfo.getLuminescentImage().getAcquisitionDateTime());
 
         File resourceCatalogXml = new File(scanDir.toFile(), "scan_catalog.xml");
         XnatResourcecatalogBean resourceCatalog = new XnatResourcecatalogBean();
@@ -70,70 +84,7 @@ public class BliScanBuilder implements Callable<XnatImagescandataBean> {
         return catEntryBean;
     }
 
-    private void parseAnalyzedClickInfo() throws IOException {
-
-        List<Path> analyzedClickInfoFiles = Files.list(scanDir).filter(path -> path.endsWith("AnalyzedClickInfo.txt")).collect(Collectors.toList());
-
-        Optional<String> operator = Optional.empty();
-        Optional<String> uid = Optional.empty();
-        Optional<Date> scanDate = Optional.empty();
-
-        // There should only be one AnalyzedClickInfo.txt per scan
-        if (analyzedClickInfoFiles.size() == 1) {
-            try (Scanner analyzedClickInfoScanner = new Scanner(analyzedClickInfoFiles.get(0))) {
-                while (analyzedClickInfoScanner.hasNextLine()) {
-                    String line = analyzedClickInfoScanner.nextLine();
-                    String[] splitLine = line.split(":");
-
-                    if (splitLine.length == 2) {
-                        String key = splitLine[0];
-                        String value = splitLine[1].trim();
-
-                        switch(key.toLowerCase()) {
-                            case("clicknumber"): {
-                                if (!uid.isPresent()) {
-                                    uid = Optional.of(value);
-                                }
-                                break;
-                            }
-                            case("user"): {
-                                if (!operator.isPresent()) {
-                                    operator = Optional.of(value);
-                                }
-                                break;
-                            }
-                            case ("*** luminescent image"): {
-                                String acqDate = analyzedClickInfoScanner.nextLine();
-                                acqDate = acqDate.split(":")[1];
-                                acqDate = acqDate.trim();
-
-                                // TODO Acq Time
-                                try {
-                                    SimpleDateFormat dateFormat = new SimpleDateFormat("EEEE, MMMM dd, yyyy");
-                                    scanDate = Optional.of(dateFormat.parse(acqDate));
-                                } catch (ParseException e) {
-                                    log.warn("Unable to parse scan date.");
-                                }
-
-                                break;
-                            }
-                        }
-                    }
-                }
-            } catch (FileNotFoundException e) {
-                log.warn("Unable to find AnalyzedClickInfo.txt which is weird because we just found the file.");
-            }
-        } else {
-            log.error("There should be a single AnalyzedClickInfo.txt file per scan directory.");
-        }
-
-        if (!uid.isPresent()) {
-            log.info("Unable to find a UID in AnalyzedClickInfo.txt for scan {}. Will generate a random UID instead.", bliScan.getId());
-        }
-
-        // TODO Scan date??
-        bliScan.setUid(uid.orElse(UUID.randomUUID().toString()));
-        bliScan.setOperator(operator.orElse(""));
-        bliScan.setStartDate(scanDate.orElse(null));
+    public void setAnalyzedClickInfoHelper(AnalyzedClickInfoHelper analyzedClickInfoHelper) {
+        this.analyzedClickInfoHelper = analyzedClickInfoHelper;
     }
 }

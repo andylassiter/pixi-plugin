@@ -42,7 +42,9 @@ import org.springframework.context.annotation.ComponentScan;
                 "org.nrg.xnatx.plugins.pixi.repositories",
                 "org.nrg.xnatx.plugins.pixi.services.impl",
                 "org.nrg.xnatx.plugins.pixi.rest",
-                "org.nrg.xnatx.plugins.pixi.preferences"
+                "org.nrg.xnatx.plugins.pixi.preferences",
+                "org.nrg.xnatx.plugins.pixi.bli.helpers",
+                "org.nrg.xnatx.plugins.pixi.bli.helpers.impl"
 })
 @Slf4j
 public class PIXIPlugin {

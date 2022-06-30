@@ -13,24 +13,25 @@ import org.nrg.xdat.om.XnatProjectdata;
 import org.nrg.xft.security.UserI;
 import org.nrg.xft.utils.fileExtraction.Format;
 import org.nrg.xnat.helpers.ZipEntryFileWriterWrapper;
-import org.nrg.xnat.helpers.prearchive.*;
+import org.nrg.xnat.helpers.prearchive.PrearcDatabase;
+import org.nrg.xnat.helpers.prearchive.PrearcUtils;
+import org.nrg.xnat.helpers.prearchive.SessionData;
 import org.nrg.xnat.helpers.uri.URIManager;
 import org.nrg.xnat.restlet.actions.importer.ImporterHandler;
 import org.nrg.xnat.restlet.actions.importer.ImporterHandlerA;
 import org.nrg.xnat.restlet.util.FileWriterWrapperI;
 import org.nrg.xnat.services.messaging.prearchive.PrearchiveOperationRequest;
 import org.nrg.xnat.turbine.utils.ArcSpecManager;
+import org.nrg.xnatx.plugins.pixi.bli.helpers.AnalyzedClickInfoHelper;
+import org.nrg.xnatx.plugins.pixi.bli.models.AnalyzedClickInfo;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -42,7 +43,6 @@ import static org.nrg.xnat.archive.Operation.Rebuild;
  *
  * Supports ZIP uploads of a BLI session. Each directory in the folder is assumed to be a single session.
  *
- * TODO Parameters in AnalyzedClickInfo.txt
  */
 @ImporterHandler(handler = BliImporter.BLI_IMPORTER)
 @Slf4j
@@ -57,6 +57,7 @@ public class BliImporter extends ImporterHandlerA {
     private final Set<String> uris;
     private final Set<Path> timestampDirectories;
     private final Set<SessionData> sessions;
+    private AnalyzedClickInfoHelper analyzedClickInfoHelper;
     private static final String UNKNOWN_SESSION_LABEL = "bli_zip_upload";
 
     public BliImporter(final Object listenerControl,
@@ -72,6 +73,7 @@ public class BliImporter extends ImporterHandlerA {
         this.uris = Sets.newLinkedHashSet();
         this.timestampDirectories = Sets.newLinkedHashSet();
         this.sessions = Sets.newLinkedHashSet();
+        this.analyzedClickInfoHelper = XDAT.getContextService().getBean(AnalyzedClickInfoHelper.class);
     }
 
     @Override
@@ -132,7 +134,6 @@ public class BliImporter extends ImporterHandlerA {
         final String directoryName = ze.getName();
         log.info("Importing directory: {}", directoryName);
 
-
         // Create prearchive timestamp
         final String timestamp = PrearcUtils.makeTimestamp();
 
@@ -143,6 +144,8 @@ public class BliImporter extends ImporterHandlerA {
         Optional<String> scanLabel = Optional.empty();
         Optional<String> uid = Optional.empty();
         Optional<Date> scanDate = Optional.empty();
+
+        Optional<AnalyzedClickInfo> analyzedClickInfo = Optional.empty();
 
         boolean analyzedClickInfoRead = false;
 
@@ -190,90 +193,32 @@ public class BliImporter extends ImporterHandlerA {
             // AnalyzedClickInfo.txt is the header file and contains all session metadata
             // Other file can be directly save to the prearchive
             if (fileName.equalsIgnoreCase("AnalyzedClickInfo.txt")) {
-                log.info("Parsing AnalyzedClickInfo.txt for session metadata.");
 
-                // Need to write this file as it's read/scanned from the input stream
-                FileWriter fileWriter = new FileWriter(prearchiveFile.toFile());
+                Path analyzedClickInfoJson = prearchiveTempDirectoryPath.resolve("AnalyzedClickInfo.json");
+                Files.createFile(analyzedClickInfoJson);
 
-                // Scanner will find the subject and session labels if they weren't already provided
-                Scanner analyzedClickInfoScanner = new Scanner(zin);
+                analyzedClickInfo = Optional.of(analyzedClickInfoHelper.parse(zin, prearchiveFile, analyzedClickInfoJson));
 
-                while (analyzedClickInfoScanner.hasNextLine()) {
-                    String line = analyzedClickInfoScanner.nextLine();
-                    fileWriter.write(line);
-                    fileWriter.write("\n");
+                if (!sessionLabel.isPresent()) {
+                    sessionLabel = Optional.ofNullable(replaceWhitespace(analyzedClickInfo.get().getUserLabelNameSet().getExperiment()));
+                }
 
-                    // File should be colon delineated
-                    String[] splitLine = line.split(":");
+                if (!subjectId.isPresent()) {
+                    String animalNumber = analyzedClickInfo.get().getUserLabelNameSet().getAnimalNumber();
 
-                    if (splitLine.length == 2) {
-
-                        String key = splitLine[0];
-                        String value = splitLine[1].trim();
-
-                        switch (key.toLowerCase()) {
-                            case ("experiment"): {
-                                // TODO Determine Unique Session Label / Experiment Field
-                                if (!sessionLabel.isPresent()) {
-                                    sessionLabel = Optional.of(replaceWhitespace(value));
-                                    log.debug("Session Label found in AnalyzedClickInfo.txt: {}", sessionLabel.get());
-                                }
-                                break;
-                            }
-                            case ("animal number"): {
-                                // TODO They are not using animal number field. Can we get them to use it instead of the comment field? Can the animal number field include commas?
-                                if (!subjectId.isPresent()) {
-
-                                    // TODO Can we store hotel sessions under one subject?
-                                    // Hotel Session - Comma separated list of animal numbers
-                                    if (value.contains(",")) {
-                                        subjectId = Optional.of("Hotel");
-                                    } else {
-                                        subjectId = Optional.of(value);
-                                    }
-                                }
-                                break;
-                            }
-                            case ("*** luminescent image"): {
-                                // There is a few dates in AnalyzedClickInfo.txt but they should all be the same unless they were scanning at midnight(!!)
-                                String acqDate = analyzedClickInfoScanner.nextLine();
-                                acqDate = acqDate.split(":")[1];
-                                acqDate = acqDate.trim();
-
-                                try {
-                                    SimpleDateFormat dateFormat = new SimpleDateFormat("EEEE, MMMM dd, yyyy");
-                                    scanDate = Optional.of(dateFormat.parse(acqDate));
-                                } catch (ParseException e) {
-                                    log.warn("Unable to parse scan date.");
-                                }
-
-                                break;
-                            }
-                            case ("view"): {
-                                // TODO: Can we use the view field for prone / supine? Is view -> orientation?
-                                // Dorsal / Ventral / Prone / Supine orientation will be used for scan labels
-                                if (!scanLabel.isPresent()) {
-                                    scanLabel = Optional.of(replaceWhitespace(value));
-                                }
-                                break;
-                            }
-                            case("***  clicknumber"): {
-                                // Not sure if there is really a UID for BLI. XNAT requires one and this seems like the best option.
-                                if (!uid.isPresent()) {
-                                    uid = Optional.of(replaceWhitespace(value));
-                                }
-                                break;
-                            }
-
+                    if (animalNumber != null) {
+                        if (animalNumber.contains(",")) {
+                            // Comma separated animal numbers will indicate a hotel session
+                            subjectId = Optional.of("Hotel");
+                        } else {
+                            subjectId = Optional.of(animalNumber);
                         }
                     }
                 }
 
-                // Finished parsing AnalyzedClickInfo.txt
-                fileWriter.flush();
-                fileWriter.close();
-
-                analyzedClickInfoRead = true;
+                scanDate = Optional.of(analyzedClickInfo.get().getLuminescentImage().getAcquisitionDateTime());
+                scanLabel = Optional.ofNullable(replaceWhitespace(analyzedClickInfo.get().getUserLabelNameSet().getView()));
+                uid = Optional.ofNullable(replaceWhitespace(analyzedClickInfo.get().getClickNumber().getClickNumber()));
 
                 // Populate session
                 session.setFolderName(sessionLabel.orElse(UNKNOWN_SESSION_LABEL));
@@ -284,7 +229,7 @@ public class BliImporter extends ImporterHandlerA {
                 session.setTimestamp(timestamp);
                 session.setStatus(PrearcUtils.PrearcStatus.RECEIVING);
                 session.setLastBuiltDate(Calendar.getInstance().getTime());
-                session.setSubject(subjectId.orElse(null));
+                session.setSubject(subjectId.orElse(""));
                 session.setSource(params.get(URIManager.SOURCE));
                 session.setPreventAnon(Boolean.valueOf((String) params.get(URIManager.PREVENT_ANON)));
                 session.setPreventAutoCommit(Boolean.valueOf((String) params.get(URIManager.PREVENT_AUTO_COMMIT)));
@@ -299,8 +244,7 @@ public class BliImporter extends ImporterHandlerA {
             ze = zin.getNextEntry();
         }
 
-        if (analyzedClickInfoRead) {
-
+        if (analyzedClickInfo.isPresent()) {
             if (!scanLabel.isPresent()) {
                 if (uid.isPresent()) {
                     scanLabel = uid;
@@ -339,7 +283,6 @@ public class BliImporter extends ImporterHandlerA {
                 sessions.add(session);
                 uris.add(sessionFolder.toString());
             }
-
         } else {
             log.error("AnalyzedClickInfo.txt is missing from session directory {}", directoryName);
             FileUtils.deleteDirectory(prearchiveTimestampPath.toFile());
@@ -349,8 +292,15 @@ public class BliImporter extends ImporterHandlerA {
         return ze;
     }
 
-    // TODO Put in core xnat??
     private PrearchiveCode shouldAutoArchive(final String projectId) {
+        if (params.containsKey("dest")) {
+            if (params.get("dest").equals("/prearchive")) {
+                return PrearchiveCode.Manual;
+            } else if (params.get("dest").equals("/archive")) {
+                return PrearchiveCode.AutoArchive;
+            }
+        }
+
         if (null == projectId) {
             return null;
         }
@@ -367,6 +317,7 @@ public class BliImporter extends ImporterHandlerA {
                              "prearchive code, but it's probably not good that the arc project wasn't found.", project.getId());
             return null;
         }
+
         return PrearchiveCode.code(arcProject.getPrearchiveCode());
     }
 
@@ -462,6 +413,10 @@ public class BliImporter extends ImporterHandlerA {
         } catch (Exception e) {
             log.info("Unable to request session build. Sitewide prearchive settings will be used instead.");
         }
+    }
+
+    public void setAnalyzedClickInfoHelper(final AnalyzedClickInfoHelper analyzedClickInfoHelper) {
+        this.analyzedClickInfoHelper = analyzedClickInfoHelper;
     }
 
 }
