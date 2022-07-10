@@ -236,81 +236,6 @@ console.log('pixi-editScanRecord.js');
 
     };
 
-    XNAT.plugin.pixi.initScanRecord = function(newExperiment = true){
-        // get all known scan records
-        XNAT.xhr.getJSON({
-            url: XNAT.url.rootUrl('/data/projects/' + project + '/experiments?xsiType=pixi:hotelScanRecord'),
-            async: false,
-            success: function (data) {
-                if (data.ResultSet.Result.length) {
-                    data.ResultSet.Result.forEach((record) => {
-                        hotelScanRecords.push({
-                            label: record.label,
-                            session: record.label.split('_scan_record')[0]
-                        });
-                    });
-                }
-            },
-            fail: function (e) {
-                console.warn(e)
-            }
-        });
-
-        // populate the image session selector with all known image sessions in this project
-        XNAT.xhr.getJSON({
-            url: XNAT.url.rootUrl('/data/projects/'+project+'/experiments?xsiType=xnat:imageSessionData'),
-            async: false,
-            success: function (data) {
-                let sessions = data.ResultSet.Result;
-                if (sessions.length) {
-                    // remove image sessions that have already been split and sort alphabetically
-                    sessions = sessions
-                        .filter((session) => { return session.label.indexOf('_split_')<0 })
-                        .sort((a, b) => {return(a.label < b.label) ? -1 : 1 });
-                    sessions.forEach(session => {
-                        $('select#session-selector').append(
-                            spawn('option', {
-                                data: {sessiondate: session.date, sessionid: session['session_ID']},
-                                value: session.label,
-                                html: session.label
-                            }))
-                    });
-
-                    if (!newExperiment){
-                        // replace the placeholder session label text with proper label name
-                        var selectedSessionId = document.getElementById("pixi:hotelScanRecord/session_label").value;
-                        var selectedSession = sessions.filter((session) => {return session['session_ID'] === selectedSessionId})[0];
-                        $('.selected-session-label').html(selectedSession.label);
-                    }
-                }
-            }
-        });
-
-        if (newExperiment){
-            let hotels;
-
-            XNAT.xhr.get({
-                url: XNAT.url.rootUrl("/xapi/pixi/hotels/"),
-                dataType: 'json',
-                async: false,
-                success: function (data) {
-                    XNAT.plugin.pixi.hotels = hotels = data;
-                    setHotelOptions(hotels);
-                    // handleHotelSelection();
-                }
-            });
-
-            function setHotelOptions(hotels) {
-                let hotelSelectorEl = document.getElementById("pixi:hotelScanRecord/hotel");
-
-                hotels.forEach(hotel => {
-                    let hotelName = hotel.name;
-                    hotelSelectorEl.options.add(new Option(hotelName, hotelName))
-                })
-            }
-        }
-    };
-
     XNAT.plugin.pixi.toggleSessionSource = function(source){
         // toggle the source of the image session -- either already in the project, or awaiting import
         $('.session-source').each(function(){
@@ -351,6 +276,11 @@ console.log('pixi-editScanRecord.js');
         }
     };
 
+    function setSessionDate(sessionDate){
+        $('.selected-session-date').html(sessionDate);
+        $('.session-source.active').find('input[name="pixi:hotelScanRecord/date"]').val(sessionDate);
+    }
+
     $(document).on('click','.session-source',function(){
         if (!$(this).hasClass('active')) {
             var source = $(this).data('source');
@@ -368,8 +298,7 @@ console.log('pixi-editScanRecord.js');
         setLabel(session.val());
 
         var sessionDate = session.data('sessiondate');
-        $('.selected-session-date').html(sessionDate);
-        $('.session-source.active').find('input[name="pixi:hotelScanRecord/date"]').val(sessionDate);
+        setSessionDate(sessionDate);
     });
 
     $(document).on('change','.subject-selector',function(){
@@ -380,5 +309,95 @@ console.log('pixi-editScanRecord.js');
     $(document).on('blur','#new-session-label',function(){
         setLabel($(this).val());
     });
+
+    XNAT.plugin.pixi.initScanRecord = function(newExperiment = true){
+        // Check for a known session ID that needs to be edited
+        var editSessionId = $('input[name=edit_session_id]').val();
+
+        // get all known scan records
+        XNAT.xhr.getJSON({
+            url: XNAT.url.rootUrl('/data/projects/' + project + '/experiments?xsiType=pixi:hotelScanRecord'),
+            async: false,
+            success: function (data) {
+                if (data.ResultSet.Result.length) {
+                    data.ResultSet.Result.forEach((record) => {
+                        hotelScanRecords.push({
+                            label: record.label,
+                            session: record.label.split('_scan_record')[0]
+                        });
+                    });
+                }
+            },
+            fail: function (e) {
+                console.warn(e)
+            }
+        });
+
+        // populate the image session selector with all known image sessions in this project
+        XNAT.xhr.getJSON({
+            url: XNAT.url.rootUrl('/data/projects/'+project+'/experiments?xsiType=xnat:imageSessionData'),
+            async: false,
+            success: function (data) {
+                let sessions = data.ResultSet.Result;
+                if (sessions.length) {
+                    // remove image sessions that have already been split and sort alphabetically
+                    sessions = sessions
+                        .filter((session) => { return session.label.indexOf('_split_')<0 })
+                        .sort((a, b) => {return(a.label < b.label) ? -1 : 1 });
+                    sessions.forEach(session => {
+                        let selected = false;
+                        if (session.label === editSessionId) {
+                            selected = 'selected';
+                            setSessionDate(session.date);
+                        }
+                        $('select#session-selector').append(
+                            spawn('option', {
+                                data: {sessiondate: session.date, sessionid: session['session_ID']},
+                                value: session.label,
+                                html: session.label,
+                                selected: selected
+                            }))
+
+                    });
+
+                    if (!newExperiment){
+                        // replace the placeholder session label text with proper label name
+                        var selectedSessionId = document.getElementById("pixi:hotelScanRecord/session_label").value;
+                        var selectedSession = sessions.filter((session) => {return session['session_ID'] === selectedSessionId})[0];
+                        $('.selected-session-label').html(selectedSession.label);
+                    }
+
+                    // if the editSessionId exists and is not listed in these sessions, toggle to the "Session is being scanned" input
+                    if (editSessionId && sessions.filter((session) => { return session.label === editSessionId }).length ) {
+                        XNAT.plugin.pixi.toggleSessionSource('new');
+                    }
+                }
+            }
+        });
+
+        if (newExperiment){
+            let hotels;
+
+            XNAT.xhr.get({
+                url: XNAT.url.rootUrl("/xapi/pixi/hotels/"),
+                dataType: 'json',
+                async: false,
+                success: function (data) {
+                    XNAT.plugin.pixi.hotels = hotels = data;
+                    setHotelOptions(hotels);
+                    // handleHotelSelection();
+                }
+            });
+
+            function setHotelOptions(hotels) {
+                let hotelSelectorEl = document.getElementById("pixi:hotelScanRecord/hotel");
+
+                hotels.forEach(hotel => {
+                    let hotelName = hotel.name;
+                    hotelSelectorEl.options.add(new Option(hotelName, hotelName))
+                })
+            }
+        }
+    };
 
 }));

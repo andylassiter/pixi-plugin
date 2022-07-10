@@ -84,6 +84,7 @@
 
 #set($presetSessionLabel = $!turbineUtils.GetPassedParameter("session_label",$data,""))
 #set($presetSessionDate = $!turbineUtils.GetPassedParameter("session_date",$data,""))
+#set($editSessionId = $!turbineUtils.GetPassedParameter("edit_session",$data,"n/a"))
 
 <form ID="form1" name="form1" method="post" action="$link.setAction("ModifyPixiItem")">
 ##	<input type="hidden" name="project" value="$!{project}" >
@@ -111,8 +112,10 @@
 
     ## If this is a new record, show the session selector interface. If not, show a standard editing UI
     ## Also check to see if a session was provided in URL parameters
-    #if(!$om.getId() && $!presetSessionLabel.length().equals(0))
+    ## Finally, check to see if the user wants to edit the existing session in a scan record -- if so, show the full UI
+    #if((!$om.getId() && $!presetSessionLabel.length().equals(0)) || $!editSessionId != "n/a")
         <h3>Select a Hotel Session</h3>
+        <input name="edit_session_id" value="$!{editSessionId}" type="hidden">
 
         <div class="column-container col-2">
             <div class="column">
@@ -181,14 +184,14 @@
         </div>
     #else
         <h3>Hotel Session</h3>
-        #if($presetSessionLabel)
+        #if($!presetSessionLabel)
             <div class="column">
                 <div class="panel panel-default">
                     <div class="panel-body">
                         <p><strong>Image Session:</strong> <a href="$content.getURI("/data/experiments/${presetSessionLabel}?format=html")" class="selected-session-label">${presetSessionLabel}</a> <i class="spacer pad5"></i> <a href="#!" onclick="changeHotelSession()"><button class="btn btn-sm">Edit</button> </a></p>
                         <p><strong>Session Date:</strong> <span class="selected-session-date">${presetSessionDate}</span></p>
-                        <input type="hidden" name="pixi:hotelScanRecord/date" value="${presetSessionDate}">
-                        <input type="hidden" name="pixi:hotelScanRecord/session_label" value="${presetSessionLabel}">
+                        <input type="hidden" id="pixi:hotelScanRecord/date" name="pixi:hotelScanRecord/date" value="${presetSessionDate}">
+                        <input type="hidden" id="pixi:hotelScanRecord/session_label" name="pixi:hotelScanRecord/session_label" value="${presetSessionLabel}">
                     </div>
                 </div>
             </div>
@@ -332,7 +335,7 @@
     XNAT.plugin.pixi.pixiSubjects = [{ value: '', label: 'Empty'}];
     #foreach( $subject in $subjects)
         #if (!$subject.label.equalsIgnoreCase("Hotel"))
-            XNAT.plugin.pixi.pixiSubjects.push({ value: '$subject.id', label: '$subject.label' });
+        XNAT.plugin.pixi.pixiSubjects.push({ value: '$subject.id', label: '$subject.label' });
         #end
     #end
 </script>
