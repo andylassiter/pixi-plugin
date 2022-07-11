@@ -264,16 +264,11 @@ console.log('pixi-editScanRecord.js');
     };
 
     XNAT.plugin.pixi.setLabel = setLabel = function(session){
-        // check for existence of ID field, which means these fields should not be edited
-        var idField = document.getElementById('pixi:hotelScanRecord/ID');
+        // check for existence of other scan records for this session
+        var existingRecords = hotelScanRecords.filter((record) => { return record.session === session });
+        var iterator = (existingRecords.length) ? '_'+existingRecords.length : '';
 
-        if (!idField.value) {
-            // check for existence of other scan records for this session
-            var existingRecords = hotelScanRecords.filter((record) => { return record.session === session });
-            var iterator = (existingRecords.length) ? '_'+existingRecords.length : '';
-
-            document.getElementById('pixi:hotelScanRecord/label').value = session+'_scan_record'+iterator;
-        }
+        document.getElementById('pixi:hotelScanRecord/label').value = session+'_scan_record'+iterator;
     };
 
     function setSessionDate(sessionDate){
