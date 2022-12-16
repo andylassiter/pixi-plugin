@@ -1,0 +1,86 @@
+<!-- BEGIN pixi-plugin templates/screens/NewSubjects.vm -->
+<div id="subject-entry-manager"></div>
+
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" />
+
+<script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pikaday@1.8.2/pikaday.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pikaday@1.8.2/css/pikaday.css">
+
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-module.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-projects.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-subjects.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-speciesPreferences.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-vendorPreferences.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-subjectEntryManager.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-pdxEntryManager.js')"></script>
+
+<style>
+    div.form-component {
+        display: flex;
+        flex-direction: column;
+        align-items: baseline;
+        row-gap: 0.4rem;
+
+        border: 1px #ccc solid;
+        border-radius: 3px;
+
+        background-color: #f7f7f7;
+
+        color: #444;
+        padding: 10px 15px 10px 10px;
+
+        width: 33%;
+    }
+
+    div.form-component.invalid {
+        background-color: #ffeaf5;
+    }
+
+    div.form-component label {
+        display: flex;
+        align-items: center;
+        font-weight: bold;
+        font-size: 13px;
+        width: 110px;
+    }
+
+    div.form-component label.required:after {
+        content: " *";
+        color: red;
+        margin-left: 4px;
+    }
+
+    div.form-component select {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .hot-container {
+        overflow: hidden;
+        margin: 2rem 10px;
+        height: 525px;
+    }
+
+    #hot-table {
+        padding: 0;
+    }
+
+    .error, .success {
+        margin: 15px;
+    }
+
+    .submit-right > input {
+        margin: 0 0 0 15px;
+    }
+
+    .handsontable td.htInvalid {
+        background-color: #ffeaf5!important;
+    }
+</style>
+
+<script type="text/javascript">
+    XNAT.plugin.pixi.subjectEntryManager.init('subject-entry-manager');
+</script>

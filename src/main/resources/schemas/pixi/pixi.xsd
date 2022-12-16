@@ -73,7 +73,13 @@
                         <xs:simpleType>
                             <xs:restriction base="xs:string">
                                 <xs:enumeration value="male"/>
+                                <xs:enumeration value="Male"/>
+                                <xs:enumeration value="m"/>
+                                <xs:enumeration value="M"/>
                                 <xs:enumeration value="female"/>
+                                <xs:enumeration value="Female"/>
+                                <xs:enumeration value="f"/>
+                                <xs:enumeration value="F"/>
                                 <xs:enumeration value="other"/>
                                 <xs:enumeration value="unknown"/>
                             </xs:restriction>
@@ -155,14 +161,12 @@
         <xs:complexContent>
             <xs:extension base="xnat:subjectAssessorData">
                 <xs:sequence>
-                    <xs:element name="weight">
-                        <xs:simpleType>
-                            <xs:restriction base="xs:decimal">
-                                <xs:minExclusive value="0"/>
-                            </xs:restriction>
-                        </xs:simpleType>
+                    <xs:element name="weight" type="xs:decimal">
+                        <xs:annotation>
+                            <xs:documentation>Subject weight</xs:documentation>
+                        </xs:annotation>
                     </xs:element>
-                    <xs:element name="unit" type="xs:string">
+                    <xs:element name="unit">
                         <xs:simpleType>
                             <xs:restriction base="xs:string">
                                 <xs:enumeration value="g"/>
@@ -203,11 +207,6 @@
                         <xs:annotation>
                             <xs:documentation>The value of the dose, e.g 500.</xs:documentation>
                         </xs:annotation>
-                        <xs:simpleType>
-                            <xs:restriction base="xs:decimal">
-                                <xs:minExclusive value="0"/>
-                            </xs:restriction>
-                        </xs:simpleType>
                     </xs:element>
                     <xs:element name="doseUnit" type="xs:string">
                         <xs:annotation>
@@ -234,14 +233,12 @@
                             <xs:documentation>Individual who administered this drug.</xs:documentation>
                         </xs:annotation>
                     </xs:element>
-                    <xs:element name="weight" minOccurs="0">
-                        <xs:simpleType>
-                            <xs:restriction base="xs:decimal">
-                                <xs:minExclusive value="0"/>
-                            </xs:restriction>
-                        </xs:simpleType>
+                    <xs:element name="weight" type="xs:decimal" minOccurs="0">
+                        <xs:annotation>
+                            <xs:documentation>Subject weight</xs:documentation>
+                        </xs:annotation>
                     </xs:element>
-                    <xs:element name="weightUnit" type="xs:string" minOccurs="0">
+                    <xs:element name="weightUnit" minOccurs="0">
                         <xs:simpleType>
                             <xs:restriction base="xs:string">
                                 <xs:enumeration value="g"/>
@@ -263,25 +260,15 @@
         <xs:complexContent>
             <xs:extension base="xnat:subjectAssessorData">
                 <xs:sequence>
-                    <xs:element name="length">
+                    <xs:element name="length" type="xs:decimal">
                         <xs:annotation>
                             <xs:documentation>The length of the tumor.</xs:documentation>
                         </xs:annotation>
-                        <xs:simpleType>
-                            <xs:restriction base="xs:decimal">
-                                <xs:minExclusive value="0"/>
-                            </xs:restriction>
-                        </xs:simpleType>
                     </xs:element>
-                    <xs:element name="width">
+                    <xs:element name="width" type="xs:decimal">
                         <xs:annotation>
                             <xs:documentation>The width of the tumor.</xs:documentation>
                         </xs:annotation>
-                        <xs:simpleType>
-                            <xs:restriction base="xs:decimal">
-                                <xs:minExclusive value="0"/>
-                            </xs:restriction>
-                        </xs:simpleType>
                     </xs:element>
                     <xs:element name="unit" type="xs:string">
                         <xs:annotation>
@@ -293,14 +280,8 @@
                             <xs:documentation>Individual who took the measurement.</xs:documentation>
                         </xs:annotation>
                     </xs:element>
-                    <xs:element name="weight" minOccurs="0">
-                        <xs:simpleType>
-                            <xs:restriction base="xs:decimal">
-                                <xs:minExclusive value="0"/>
-                            </xs:restriction>
-                        </xs:simpleType>
-                    </xs:element>
-                    <xs:element name="weightUnit" type="xs:string" minOccurs="0">
+                    <xs:element name="weight" type="xs:decimal" minOccurs="0"></xs:element>
+                    <xs:element name="weightUnit" minOccurs="0">
                         <xs:simpleType>
                             <xs:restriction base="xs:string">
                                 <xs:enumeration value="g"/>
@@ -442,11 +423,6 @@
                 <xs:annotation>
                     <xs:documentation>Subject weight (g)</xs:documentation>
                 </xs:annotation>
-                <xs:simpleType>
-                    <xs:restriction base="xs:decimal">
-                        <xs:minInclusive value="0"/>
-                    </xs:restriction>
-                </xs:simpleType>
             </xs:element>
             <xs:element name="injection_time" type="xs:time" minOccurs="0">
                 <xs:annotation>
@@ -457,11 +433,6 @@
                 <xs:annotation>
                     <xs:documentation>Radiopharmaceutical Activity</xs:documentation> <!-- //TODO: Units -->
                 </xs:annotation>
-                <xs:simpleType>
-                    <xs:restriction base="xs:decimal">
-                        <xs:minInclusive value="0"/>
-                    </xs:restriction>
-                </xs:simpleType>
             </xs:element>
             <xs:element name="notes" type="xs:string" minOccurs="0">
                 <xs:annotation>

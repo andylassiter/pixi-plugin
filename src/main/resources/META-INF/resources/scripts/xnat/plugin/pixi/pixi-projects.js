@@ -41,4 +41,25 @@ XNAT.plugin.pixi.projects = getObject(XNAT.plugin.pixi.projects || {});
         return response.json()
     }
 
+    XNAT.plugin.pixi.projects.populateSelectBox = async function(projectSelectorId) {
+        let projectSelectorEl = document.getElementById(projectSelectorId);
+
+        return XNAT.plugin.pixi.projects.getAll()
+            .then(resultSet => resultSet['ResultSet']['Result'])
+            .then(projects => {
+                // Clear select box
+                projectSelectorEl.options.length = 0;
+
+                // Placeholder
+                //projectSelectorEl.options[0] = new Option("Select " + XNAT.app.displayNames.singular.project, "");
+                projectSelectorEl.options[0] = new Option("");
+                projectSelectorEl.options[0].disabled = true;
+                projectSelectorEl.options[0].selected = true;
+
+                projects.forEach(project => {
+                    projectSelectorEl.options[projectSelectorEl.length] = new Option(project['id'], project['id'])
+                })
+            });
+    }
+
 }));
