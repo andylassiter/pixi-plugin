@@ -41,10 +41,10 @@ XNAT.plugin.pixi.subjects = getObject(XNAT.plugin.pixi.subjects || {});
         return response.json()
     }
 
-    XNAT.plugin.pixi.subjects.create = async function(projectId, subjectLabel, researchGroup = null, species = null,
-                                                      sex = null, dob = null, litter = null, strain = null,
-                                                      source = null, stockNumber = null, humanizationType = null,
-                                                      geneticModifications = null, geneticModificationsNonStd = null) {
+    XNAT.plugin.pixi.subjects.createOrUpdate = async function(projectId, subjectLabel, researchGroup = null, species = null,
+                                                              sex = null, dob = null, litter = null, strain = null,
+                                                              source = null, stockNumber = null, humanizationType = null,
+                                                              geneticModifications = null, geneticModificationsNonStd = null) {
         console.debug(`pixi-subjects.js: XNAT.plugin.pixi.subjects.create`);
 
         let subjectUrl = XNAT.url.csrfUrl(`/data/projects/${projectId}/subjects/${subjectLabel}`);

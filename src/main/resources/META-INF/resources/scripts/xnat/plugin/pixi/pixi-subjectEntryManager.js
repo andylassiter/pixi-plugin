@@ -28,14 +28,10 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         containerId;
         container;
 
-        hotContainer;
-
         projectSelectComponent;
         submitButton;
 
-        prjSelErrMsgEl;
-        subjsErrMsgEl;
-        succMsgEl;
+        messageComponent;
 
         columns;
         hot;
@@ -52,9 +48,6 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             const self = this;
 
             this.container = document.getElementById(this.containerId);
-            this.container.innerHTML = '';
-
-            this.hotContainer = spawn('div', {id: 'hot-table'})
 
             this.projectSelectComponent = spawn('div.form-component.containerItem', [
                 spawn('label.required|for=\'project\'', 'Select a Project'),
@@ -65,12 +58,12 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                             self.validateProjectSelection();
                             self.hot.validateCells();
                         }},
-                    [spawn('option|', {selected: true, disabled: true, value: ''}, '')])
-            ])
+                    [spawn('option|', {selected: true, disabled: true, value: ''}, '')]),
+                spawn('div.prj-error', {style: {display: 'none'}}, 'Please select a project')
+            ]);
 
-            this.prjSelErrMsgEl = spawn('div.error.prj-error', {id: 'prj-error-msg', style: {visibility: 'hidden'}}, 'Please select a project.');
-            this.subjsErrMsgEl = spawn('div.error', {id: 'table-error-msg', style: {display: 'none'}});
-            this.succMsgEl = spawn('div.success', {id: 'table-success-msg', style: {display: 'none'}});
+
+            this.messageComponent = spawn('div', {id: 'table-msg', style: {display: 'none'}});
 
             let titleEl = spawn('h2', 'New Subjects');
 
@@ -82,9 +75,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                         'cannot contain spaces or special characters.'),
                     spawn('hr'),
                     self.projectSelectComponent,
-                    spawn('div.hot-container.containerIterm', [self.hotContainer]),
-                    self.succMsgEl,
-                    self.subjsErrMsgEl
+                    spawn('div.hot-container.containerIterm', [spawn('div.hot-table')]),
+                    self.messageComponent
                 ])
             ]);
 
@@ -103,8 +95,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
             let buttons = spawn('div.submit-right', [
                 self.submitButton,
-                spawn('input.btn.pull-right|type=button|value=Add PDXs', {onclick: () => {self.reset(); XNAT.plugin.pixi.pdxEntryManager.init(self.containerId)}}),
-                spawn('input.btn.pull-right|type=button|value=Add Cell Lines', {onclick: () => self.reset()}),
+                spawn('input.btn.pull-right|type=button|value=Enter PDX Details', {onclick: () => {self.reset(); XNAT.plugin.pixi.pdxEntryManager.init(self.containerId)}}),
+                spawn('input.btn.pull-right|type=button|value=Enter Cell Line Details', {onclick: () => self.reset()}),
                 spawn('div.clear')
             ])
 
@@ -203,7 +195,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             ]
 
             // Handsontable
-            this.hot = new Handsontable(this.hotContainer, {
+            this.hot = new Handsontable(self.container.querySelector('.hot-table'), {
                 data: [
                     ["", "", "", "", "", "", "", "", "" ,"" ,"", ""],
                     ["", "", "", "", "", "", "", "", "" ,"" ,"", ""],
@@ -248,7 +240,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                             let displayRow = row + 1;
 
                             // Otherwise presume it matches an existing subject id in the project.
-                            self.errorMessages.set(key, `Row ${displayRow}: ${value} matches an existing subject id.`);
+                            self.errorMessages.set(key, `Row ${displayRow}: ${value} matches an existing subject id in 
+                            ${XNAT.app.displayNames.singular.project.toLowerCase()} ${self.getProjectSelection()}.`);
                         }
                     } else {
                         self.errorMessages.delete(key);
@@ -259,47 +252,45 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     let isFirstSubject = isEmpty && prop === "subjectId" && value !== null && value !== '';
 
                     if (self.errorMessages.size > 0) {
-                        self.subjsErrMsgEl.style.display = "";
-                        self.subjsErrMsgEl.innerHTML = '';
-                        self.subjsErrMsgEl.append(spawn('p', 'Errors found:'))
-                        self.subjsErrMsgEl.append(spawn('ul', Array.from(self.errorMessages.values()).map(msg => spawn('li',msg))));
+                        let message = spawn('div', [
+                            spawn('p', 'Errors found:'),
+                            spawn('ul', Array.from(self.errorMessages.values()).map(msg => spawn('li',msg)))
+                        ])
+
+                        self.displayMessage('error', message);
 
                         self.disableSubmitButton();
                     } else {
-                        self.subjsErrMsgEl.innerHTML = '';
-                        self.subjsErrMsgEl.style.display = "none";
+                        self.clearAndHideMessage();
 
                         // Valid project and ((table is not empty) or (table is empty and this is the first subjectId))
                         if (isProjectValid && (!isEmpty || isFirstSubject)) self.enableSubmitButton();
                     }
                 },
                 beforeChange: (changes, source) => {
-                    console.log(source);
                     for (let i = changes.length - 1; i >= 0; i--) {
                         if (changes[i][1] === 'subjectId') {
                             if(changes[i][3] !== null){
-                                changes[i][3] = changes[i][3].replaceAll(' ', '_'); // Remove spaces
+                                // Remove spaces and special characters from subject ids
+                                changes[i][3] = changes[i][3].replaceAll(' ', '_');
+                                changes[i][3] = changes[i][3].replaceAll(/[!@#&?<>()*$%]/g,"_");
 
-                                changes[i][3] = changes[i][3].replaceAll(/[&]/g,"_"); // And special characters
-                                changes[i][3] = changes[i][3].replaceAll(/[?]/g,"_");
-                                changes[i][3] = changes[i][3].replaceAll(/[<]/g,"_");
-                                changes[i][3] = changes[i][3].replaceAll(/[>]/g,"_");
-                                changes[i][3] = changes[i][3].replaceAll(/[(]/g,"_");
-                                changes[i][3] = changes[i][3].replaceAll(/[)]/g,"_");
-                                changes[i][3] = changes[i][3].replaceAll(/[*]/g,"_");
-                                changes[i][3] = changes[i][3].replaceAll(/[$]/g,"_");
-                                changes[i][3] = changes[i][3].replaceAll(/[%]/g,"_");
+                                // Append _1, _2, _3, ... to the subject ids to prevent entry of duplicate id's
+                                let counter = 1;
+                                if (changes[i][2] !== changes[i][3]) { // If the data changed
+                                    while(self.hot.getDataAtProp('subjectId').contains(changes[i][3])) {
+                                        if (counter === 1) {
+                                            changes[i][3] = `${changes[i][3]}_${counter}`;
+                                        } else {
+                                            changes[i][3] = changes[i][3].slice(0,-1).concat(counter);
+                                        }
+                                        counter = counter + 1;
+                                    }
+                                }
                             }
                         }
                     }
                 }
-                // afterOnCellMouseDown: () => {
-                //     if (self.projectSelectEl.value === '') {
-                //         self.prjSelErrMsgEl.style.visibility = "";
-                //         self.projectSelectEl.classList.add('invalid')
-                //     }
-                // },
-                //afterChange: (changes) => {if (changes !== null) self.validateProjectSelection()},
             });
 
             this.initSpeciesSelector();
@@ -309,7 +300,6 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             // Place cursor at first cell
             this.hot.selectCell(0, 0, 0, 0);
         }
-
 
         addKeyboardShortCuts() {
             const self = this;
@@ -352,9 +342,11 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
             if (self.getProjectSelection() === '') {
                 self.projectSelectComponent.classList.add('invalid')
+                self.projectSelectComponent.querySelector('.prj-error').style.display = '';
                 return false;
             } else {
                 self.projectSelectComponent.classList.remove('invalid');
+                self.projectSelectComponent.querySelector('.prj-error').style.display = 'none'
                 return true;
             }
         }
@@ -407,75 +399,110 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             return isSubjectIdsEmpty
         }
 
+        clearAndHideMessage() {
+            const self = this;
+            self.messageComponent.style.display = 'none';
+            self.messageComponent.innerHTML = '';
+            self.messageComponent.classList.remove('success');
+            self.messageComponent.classList.remove('error');
+            self.messageComponent.classList.remove('warning');
+            self.messageComponent.classList.remove('info');
+        }
+
+        displayMessage(type, message) {
+            const self = this;
+            self.messageComponent.style.display = '';
+            self.messageComponent.innerHTML = '';
+            self.messageComponent.classList.add(type);
+            self.messageComponent.append(message)
+        }
+
         async submit() {
             const self = this;
 
-            console.debug('Submitting')
+            console.debug('Submitting.')
 
             if (!this.validateProjectSelection()) {
+                console.error('Invalid project selection.');
                 return;
             }
 
             if (self.isEmpty()) {
+                console.debug('Nothing to submit.');
                 return;
             }
+
+            if (self.errorMessages.size > 0) {
+                console.error('Cannot submit with invalid data.');
+                return;
+            }
+
+            XNAT.ui.dialog.static.wait('Submitting to XNAT', {id: "create_subjects"});
 
             let projectId =  this.getProjectSelection();
             let subjects = [];
 
-            let successfullRows = [];
+            let successfulRows = [];
+            let failedRows = [];
             let emptyRows = [];
 
-            // TODO: Check for unique subject ids in table
+            for (let iRow = 0; iRow < this.hot.countRows(); iRow++) {
+                let subjectLabel = this.hot.getDataAtRowProp(iRow, 'subjectId');
+                const hasSubjectId = !(subjectLabel === null || subjectLabel === undefined || subjectLabel === '');
+                const isEmptyRow = this.hot.isEmptyRow(iRow)
+                const isNotEmptyRow = !isEmptyRow
 
-            // Presume all subjects are valid
-            for (let i = 0; i < this.hot.countRows(); i++) {
-                const isNotEmptyRow = !this.hot.isEmptyRow(i)
-                const rowMeta = this.hot.getCellMetaAtRow(0)
-                const isNotReadOnly = rowMeta.filter(cellMeta =>
-                    cellMeta['prop'] === 'subjectId'
-                    && 'readOnly' in cellMeta && cellMeta['readOnly']).length === 0;
+                if (!hasSubjectId && isNotEmptyRow) {
+                    failedRows.push(
+                        {
+                            'subjectId': '',
+                            'row': iRow,
+                            'error': 'Id field is missing but row is not empty.'
+                        }
+                    )
+                } else if (isEmptyRow) {
+                    emptyRows.push(iRow);
+                } else if (hasSubjectId) {
+                    let researchGroup = this.hot.getDataAtRowProp(iRow, 'researchGroup');
+                    let species = this.hot.getDataAtRowProp(iRow, 'species');
+                    let sex = this.hot.getDataAtRowProp(iRow, 'sex');
+                    let dob = this.hot.getDataAtRowProp(iRow, 'dob');
+                    let litter = this.hot.getDataAtRowProp(iRow, 'litter');
+                    let strain = this.hot.getDataAtRowProp(iRow, 'strain');
+                    let source = this.hot.getDataAtRowProp(iRow, 'vendor');
+                    let stockNumber = this.hot.getDataAtRowProp(iRow, 'stockNumber');
+                    let humanizationType = this.hot.getDataAtRowProp(iRow, 'humanizationType');
+                    let geneticModifications = this.hot.getDataAtRowProp(iRow, 'geneticModifications');
+                    let geneticModificationsNonStd = this.hot.getDataAtRowProp(iRow, 'geneticModificationsNonStd');
 
-                console.log(`isNotReadOnly: ${isNotReadOnly}`);
-                console.log(`isNotEmptyRow: ${isNotEmptyRow}`);
+                    try {
+                        let url = await XNAT.plugin.pixi.subjects.createOrUpdate(projectId, subjectLabel,
+                            researchGroup, species, sex, dob, litter, strain, source, stockNumber, humanizationType,
+                            geneticModifications, geneticModificationsNonStd);
 
-                if (isNotEmptyRow && isNotReadOnly) {
-                    let subjectLabel = this.hot.getDataAtRowProp(i, 'subjectId');
-                    let researchGroup = this.hot.getDataAtRowProp(i, 'researchGroup');
-                    let species = this.hot.getDataAtRowProp(i, 'species');
-                    let sex = this.hot.getDataAtRowProp(i, 'sex');
-                    let dob = this.hot.getDataAtRowProp(i, 'dob');
-                    let litter = this.hot.getDataAtRowProp(i, 'litter');
-                    let strain = this.hot.getDataAtRowProp(i, 'strain');
-                    let source = this.hot.getDataAtRowProp(i, 'vendor');
-                    let stockNumber = this.hot.getDataAtRowProp(i, 'stockNumber');
-                    let humanizationType = this.hot.getDataAtRowProp(i, 'humanizationType');
-                    let geneticModifications = this.hot.getDataAtRowProp(i, 'geneticModifications');
-                    let geneticModificationsNonStd = this.hot.getDataAtRowProp(i, 'geneticModificationsNonStd');
-
-                    let url = await XNAT.plugin.pixi.subjects.create(projectId, subjectLabel,
-                        researchGroup, species, sex, dob, litter, strain, source, stockNumber, humanizationType,
-                        geneticModifications, geneticModificationsNonStd);
-
-                    console.log(url);
-
-                    successfullRows.push(i)
-
-                    subjects.push({
-                        'subjectId': subjectLabel,
-                        'url': url
-                    });
-                } else if (!isNotEmptyRow) {
-                    emptyRows.push(i);
+                        successfulRows.push(iRow)
+                        subjects.push({
+                            'subjectId': subjectLabel,
+                            'url': url
+                        });
+                    } catch (e) {
+                        failedRows.push(
+                            {
+                                'subjectId': subjectLabel,
+                                'row': iRow,
+                                'error': e
+                            }
+                        )
+                    }
                 }
             }
 
-            // Disable new inputs
+            // Disable new inputs to successful rows
             this.hot.updateSettings({
                 cells: function (row, col) {
                     var cellProperties = {};
 
-                    if (successfullRows.contains(row)) {
+                    if (successfulRows.contains(row)) {
                         cellProperties.readOnly = true;
                     } else if (emptyRows.contains(row)) {
                         cellProperties.readOnly = true;
@@ -487,19 +514,43 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             });
 
             this.removeKeyboardShortCuts();
-            this.disableProjectSelection()
-            this.disableSubmitButton();
+            this.disableProjectSelection();
 
-            console.log(successfullRows);
+            XNAT.ui.dialog.close('create_subjects');
 
-            if ((this.hot.countRows() - this.hot.countEmptyRows()) === successfullRows.length) {
-                this.succMsgEl.style.display = '';
-                this.succMsgEl.innerHTML = ''
+            const nonEmptyRows = this.hot.countRows() - this.hot.countEmptyRows();
+            if (nonEmptyRows === successfulRows.length) { // All submissions successful
+                // Display success message
+                let message = spawn('div', [
+                    spawn('p', 'Successful submissions:'),
+                    spawn('ul', subjects.map(subject => spawn('li', [ spawn(`a`, {href: subject['url'], target: '_BLANK'}, subject['subjectId']) ])))
+                ])
 
-                this.succMsgEl.append(spawn('p', 'Successful submissions:'))
-                this.succMsgEl.append(spawn('ul', subjects.map(subject => spawn('li', [ spawn(`a`, {href: subject['url'], target: '_BLANK'}, subject['subjectId']) ]))));
+                self.displayMessage('success', message);
+
+                // Disable resubmissions
+                this.disableSubmitButton();
+            } else if (successfulRows.length === 0 && failedRows.length > 0) {
+                // All submissions in error
+                let message = spawn('div', [
+                    spawn('p', ''),
+                    spawn('p', 'There were errors with your submission. Correct the issues and try resubmitting.'),
+                    spawn('ul', failedRows.map(subject => spawn('li', `Row: ${subject['row'] + 1} ${XNAT.app.displayNames.singular.subject} ID: ${subject['subjectId']} ${subject['error']}`))),
+                ])
+
+                self.displayMessage('error', message);
+            } else if (successfulRows.length > 0 && failedRows.length > 0) {
+                // Some submitted successfully, some failed
+                let message = spawn('div', [
+                    spawn('p', 'There were errors with your submission. Correct the issues and try resubmitting.'),
+                    spawn('p', 'Error(s):'),
+                    spawn('ul', failedRows.map(subject => spawn('li', `Row: ${subject['row'] + 1} ${XNAT.app.displayNames.singular.subject} ID: ${subject['subjectId']} ${subject['error']}`))),
+                    spawn('p', 'Successful submissions:'),
+                    spawn('ul', subjects.map(subject => spawn('li', [ spawn(`a`, {href: subject['url'], target: '_BLANK'}, subject['subjectId']) ])))
+                ])
+
+                self.displayMessage('warning', message);
             }
-
         }
     }
 

@@ -64,12 +64,17 @@
         height: 525px;
     }
 
-    #hot-table {
-        padding: 0;
+    .error, .success, .info, .warning {
+        margin: 15px;
     }
 
-    .error, .success {
-        margin: 15px;
+    div.containerBody > div.error > div,
+    div.containerBody > div.success > div,
+    div.containerBody > div.info > div,
+    div.containerBody > div.warning > div,
+    div.containerBody > div > div.prj-error,
+    div.containerBody > div > div.hot-table {
+        padding: 0;
     }
 
     .submit-right > input {
