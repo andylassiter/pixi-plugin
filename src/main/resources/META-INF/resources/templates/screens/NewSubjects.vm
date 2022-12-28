@@ -81,7 +81,9 @@
 </style>
 
 <script type="text/javascript">
-    XNAT.plugin.pixi.subjectEntryManager.init('subject-entry-manager');
+    const urlParams = new URLSearchParams(window.location.search);
+    const projectParam = urlParams.get('project');
+    XNAT.plugin.pixi.subjectEntryManager.init('subject-entry-manager', projectParam);
 </script>
 
 <!-- END pixi-plugin templates/screens/NewSubjects.vm -->

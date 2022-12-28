@@ -58,21 +58,22 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         async init(containerId, hotSettings) {
             const self = this;
 
-            self.containerId = containerId;
-            self.container = document.getElementById(self.containerId);
+            this.containerId = containerId;
+            this.container = document.getElementById(this.containerId);
 
-            return self.render().then(() => {
-                self.hot = new Handsontable(self.container.querySelector('.hot-table'), hotSettings);
+            return this.render()
+                .then(() => {
+                    this.hot = new Handsontable(this.container.querySelector('.hot-table'), hotSettings);
 
-                self.addKeyboardShortCuts();
+                    this.addKeyboardShortCuts();
 
-                self.updateHeight();
-                self.hot.addHook('afterCreateRow', (index, amount, source) => self.updateHeight());
-                self.hot.addHook('afterRemoveRow', (index, amount, physicalRows, source) => self.updateHeight());
+                    this.updateHeight();
+                    this.hot.addHook('afterCreateRow', (index, amount, source) => this.afterCreateRow(index, amount, source));
+                    this.hot.addHook('afterRemoveRow', (index, amount, physicalRows, source) => this.afterRemoveRow(index, amount, physicalRows, source));
 
-                // Place cursor at first cell
-                self.hot.selectCell(0, 0, 0, 0);
-            })
+                    // Place cursor at first cell
+                    this.hot.selectCell(0, 0, 0, 0);
+                })
         }
 
         async render() {
@@ -121,6 +122,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
             let buttons = spawn('div.submit-right', [
                 self.submitButton,
+                ...self.additionalButtons(),
                 spawn('div.clear')
             ])
 
@@ -131,6 +133,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
             return XNAT.plugin.pixi.projects.populateSelectBox('project');
         }
+
+        additionalButtons() { return []; }
 
         addKeyboardShortCuts() {
             const self = this;
@@ -147,6 +151,9 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             });
         }
 
+        afterCreateRow(index, amount, source) { this.updateHeight(); }
+        afterRemoveRow(index, amount, physicalRows, source) { this.updateHeight(); }
+
         removeKeyboardShortCuts() {
             const self = this;
 
@@ -158,19 +165,11 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             });
         }
 
-        getProjectSelection() {
-            const self = this;
-            return self.projectSelectComponent.getElementsByTagName('select')[0].value;
-        }
-
-        disableProjectSelection() {
-            const self = this;
-            self.projectSelectComponent.getElementsByTagName('select')[0].disabled = true
-        }
+        getProjectSelection() { return this.projectSelectComponent.getElementsByTagName('select')[0].value; }
+        disableProjectSelection() { this.projectSelectComponent.getElementsByTagName('select')[0].disabled = true; }
 
         setProjectSelection(project) {
-            const self = this;
-            let options = self.projectSelectComponent.getElementsByTagName('option');
+            let options = this.projectSelectComponent.getElementsByTagName('option');
 
             for (let i = 0; i < options.length; i++) {
                 let option = options[i];
@@ -182,15 +181,13 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
 
         validateProjectSelection() {
-            const self = this;
-
-            if (self.getProjectSelection() === '') {
-                self.projectSelectComponent.classList.add('invalid')
-                self.projectSelectComponent.querySelector('.prj-error').style.display = '';
+            if (this.getProjectSelection() === '') {
+                this.projectSelectComponent.classList.add('invalid')
+                this.projectSelectComponent.querySelector('.prj-error').style.display = '';
                 return false;
             } else {
-                self.projectSelectComponent.classList.remove('invalid');
-                self.projectSelectComponent.querySelector('.prj-error').style.display = 'none'
+                this.projectSelectComponent.classList.remove('invalid');
+                this.projectSelectComponent.querySelector('.prj-error').style.display = 'none'
                 return true;
             }
         }
@@ -214,43 +211,33 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                         options.push(subject['label'])
                     });
 
-                    let subjectIdColumn = self.getColumn('subjectId');
+                    let subjectIdColumn = this.getColumn('subjectId');
                     subjectIdColumn['source'] = options;
-                    self.updateColumns();
+                    this.updateColumns();
                 })
         }
 
-        enableSubmitButton() {
-            const self = this;
-            self.submitButton.disabled = false;
-        }
-
-        disableSubmitButton() {
-            const self = this;
-            self.submitButton.disabled = true;
-        }
+        enableSubmitButton() { this.submitButton.disabled = false; }
+        disableSubmitButton() { this.submitButton.disabled = true; }
 
         clearAndHideMessage() {
-            const self = this;
-            self.messageComponent.style.display = 'none';
-            self.messageComponent.innerHTML = '';
-            self.messageComponent.classList.remove('success');
-            self.messageComponent.classList.remove('error');
-            self.messageComponent.classList.remove('warning');
-            self.messageComponent.classList.remove('info');
+            this.messageComponent.style.display = 'none';
+            this.messageComponent.innerHTML = '';
+            this.messageComponent.classList.remove('success');
+            this.messageComponent.classList.remove('error');
+            this.messageComponent.classList.remove('warning');
+            this.messageComponent.classList.remove('info');
         }
 
         displayMessage(type, message) {
-            const self = this;
-            self.messageComponent.style.display = '';
-            self.messageComponent.innerHTML = '';
-            self.messageComponent.classList.add(type);
-            self.messageComponent.append(message)
+            this.messageComponent.style.display = '';
+            this.messageComponent.innerHTML = '';
+            this.messageComponent.classList.add(type);
+            this.messageComponent.append(message)
         }
 
         isEmpty() {
-            const self = this;
-            return (self.hot.countEmptyRows() === self.hot.countRows())
+            return (this.hot.countEmptyRows() === this.hot.countRows())
         }
 
         updateData(data) {
@@ -302,21 +289,18 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
     }
 
     class AbstractXenograftEntryManager extends AbstractBulkEntryManager {
+
         constructor(heading, subheading, description) {
             super(heading, subheading, description);
         }
 
-        async submitRow(row) {
-            throw new Error("Method 'submitRow()' must be implemented.");
-        }
+        async submitRow(row) { throw new Error("Method 'submitRow()' must be implemented."); }
 
         async init(containerId, project = null, subjects = []) {
-            const self = this;
-
-            let hotSettings = {
-                colHeaders: self.initialColumnHeaders(),
-                colWidths: self.initialColumnWidths(),
-                columns: self.initialColumns(),
+           let hotSettings = {
+                colHeaders: this.initialColumnHeaders(),
+                colWidths: this.initialColumnWidths(),
+                columns: this.initialColumns(),
                 rowHeaders: true,
                 manualColumnResize: true,
                 contextMenu: ['row_above', 'row_below', '---------', 'remove_row', '---------', 'undo', 'redo', '---------', 'copy', 'cut'],
@@ -332,9 +316,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
             return super.init(containerId, hotSettings, project, subjects)
                 .then(() => {
-                    this.setProjectSelection(project)
-
                     if (project !== null && project !== undefined && project !== '') {
+                        this.setProjectSelection(project);
                         this.disableProjectSelection();
                     }
                 })
@@ -361,18 +344,16 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                         this.updateHeight();
                     }
                 })
-                .then(() => this.hot.addHook('beforeChange', (changes, source) => self.beforeChange(changes, source)));
+                .then(() => this.hot.addHook('beforeChange', (changes, source) => this.beforeChange(changes, source)));
         }
 
         validateSubjectId(subjectId, callback) {
-            const self = this;
-
             let isEmpty = (item) => item === null || item === '';
 
             if (isEmpty(subjectId)) {
                 callback(false);
             } else {
-                callback(self.getColumn('subjectId').source.contains(subjectId));
+                callback(this.getColumn('subjectId').source.contains(subjectId));
             }
         }
 
@@ -403,8 +384,6 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
 
         beforeChange(changes, source) {
-            const self = this;
-
             for (let i = changes.length - 1; i >= 0; i--) {
                 if (changes[i][1] === 'injectionDate') {
                     if (changes[i][3] !== null || changes[i][3] !== '') {
@@ -412,15 +391,13 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                         if (isNaN(date)) {
                             continue;
                         }
-                        changes[i][3] = self.formatDate(new Date(date));
+                        changes[i][3] = this.formatDate(new Date(date));
                     }
                 }
             }
         }
 
         initialColumns() {
-            const self = this;
-
             return [
                 {
                     data: 'subjectId',
@@ -430,7 +407,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     source: [],
                     allowEmpty: true,
                     allowInvalid: true,
-                    validator: (value, callback) => self.validateSubjectId(value, callback)
+                    validator: (value, callback) => this.validateSubjectId(value, callback)
                 },
                 {
                     data: 'experimentId'
@@ -443,7 +420,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     source: [],
                     allowEmpty: true,
                     allowInvalid: true,
-                    validator: (value, callback) => self.validateSourceId(value, callback)
+                    validator: (value, callback) => this.validateSourceId(value, callback)
                 },
                 {
                     data: 'injectionDate',
@@ -451,7 +428,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     allowEmpty: true,
                     allowInvalid: true,
                     dateFormat: 'MM/DD/YYYY',
-                    validator: (value, callback) => self.validateInjectionDate(value, callback)
+                    validator: (value, callback) => this.validateInjectionDate(value, callback)
                 },
                 {data: 'injectionSite'},
                 {
@@ -489,33 +466,31 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
 
         async submit() {
-            const self = this;
-
-            console.debug('Submitting cell lines')
+           console.debug('Submitting')
 
             if (!this.validateProjectSelection()) {
                 console.error('Invalid project selection.');
                 return;
             }
 
-            if (self.isEmpty()) {
+            if (this.isEmpty()) {
                 console.debug('Nothing to submit.');
                 return;
             }
 
-            self.hot.validateCells(async (valid) => {
+            this.hot.validateCells(async (valid) => {
                 if (!valid) {
                     let message = spawn('div', [
-                        spawn('p', 'Invalid inputs. Please correct before resubmitting. Subject Id, Cell Line, and Injection Date are required.'),
+                        spawn('p', 'Invalid inputs. Please correct before resubmitting.'),
                     ])
 
-                    self.displayMessage('error', message);
+                    this.displayMessage('error', message);
 
                     return;
                 }
 
                 // Everything is valid, remove old messages
-                self.clearAndHideMessage();
+                this.clearAndHideMessage();
 
                 XNAT.ui.dialog.static.wait('Submitting to XNAT', {id: "submit_injection"});
 
@@ -527,9 +502,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 for (let iRow = 0; iRow < this.hot.countRows(); iRow++) {
                     let subjectLabel = this.hot.getDataAtRowProp(iRow, 'subjectId');
 
-                    await self.submitRow(iRow)
+                    await this.submitRow(iRow)
                         .then(id => {
-                            console.debug(id);
                             successfulRows.push(iRow)
                             experiments.push({
                                 'subjectId': subjectLabel,
@@ -541,7 +515,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                             return id;
                         })
                         .catch(error => {
-                            console.error(`Error creating celling line experiment: ${error}`);
+                            console.error(`Error creating experiment: ${error}`);
                             failedRows.push(
                                 {
                                     'subjectId': subjectLabel,
@@ -587,7 +561,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                         }, experiment['subjectId'])])))
                     ])
 
-                    self.displayMessage('success', message);
+                    this.displayMessage('success', message);
 
                     // Disable resubmissions
                     this.disableSubmitButton();
@@ -599,7 +573,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                         spawn('ul', failedRows.map(experiments => spawn('li', `Row: ${experiments['row'] + 1} ${XNAT.app.displayNames.singular.subject} ID: ${experiments['subjectId']} ${experiments['error']}`))),
                     ])
 
-                    self.displayMessage('error', message);
+                    this.displayMessage('error', message);
                 } else if (successfulRows.length > 0 && failedRows.length > 0) {
                     // Some submitted successfully, some failed
                     let message = spawn('div', [
@@ -613,7 +587,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                         }, experiment['subjectId'])])))
                     ])
 
-                    self.displayMessage('warning', message);
+                    this.displayMessage('warning', message);
                 }
 
                 XNAT.ui.dialog.close('submit_injection');
@@ -641,7 +615,6 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
 
         initCellLineSelector() {
-            const self = this;
             XNAT.plugin.pixi.cellLines.get().then(cellLines => {
                 let options = [];
 
@@ -650,9 +623,9 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     options.push(cellLine['sourceId'])
                 });
 
-                let columns = self.getColumns();
+                let columns = this.getColumns();
                 columns[2]['source'] = options;
-                self.hot.updateSettings({columns: columns});
+                this.hot.updateSettings({columns: columns});
             })
         }
 
@@ -708,7 +681,6 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
 
         initPdxSelector() {
-            const self = this;
             XNAT.plugin.pixi.pdxs.get().then(pdxs => {
                 let options = [];
 
@@ -717,9 +689,9 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     options.push(cellLine['sourceId'])
                 });
 
-                let columns = self.getColumns();
+                let columns = this.getColumns();
                 columns[2]['source'] = options;
-                self.hot.updateSettings({columns: columns});
+                this.hot.updateSettings({columns: columns});
             })
         }
 
@@ -741,144 +713,17 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
     }
 
-
-
-    class SubjectEntryManager {
-        containerId;
-        container;
-
-        projectSelectComponent;
-        submitButton;
-
-        messageComponent;
-
-        columns;
-        hot;
-        errorMessages;
-        successMessages;
-        lastKey;
+    class SubjectEntryManager extends AbstractBulkEntryManager {
 
         constructor() {
-            this.errorMessages = new Map();
-            this.successMessages = new Map();
+            super("New Subjects",
+                "Enter subject details",
+                "After selecting a project, define the details of each subject. The 'Subject ID' should be a " +
+                "single word or acronym which will identify your subject and cannot contain spaces or special " +
+                "characters.");
         }
 
-        spawn() {
-            const self = this;
-
-            this.container = document.getElementById(this.containerId);
-
-            this.projectSelectComponent = spawn('div.form-component.containerItem', [
-                spawn('label.required|for=\'project\'', 'Select a Project'),
-                spawn('select.form-control', {
-                        id: 'project',
-                        name: 'project',
-                        onchange: () => {
-                            self.validateProjectSelection();
-                            self.hot.validateCells();
-                        }
-                    },
-                    [spawn('option|', {selected: true, disabled: true, value: ''}, '')]),
-                spawn('div.prj-error', {style: {display: 'none'}}, 'Please select a project')
-            ]);
-
-            this.messageComponent = spawn('div', {id: 'table-msg', style: {display: 'none'}});
-
-            let titleEl = spawn('h2', 'New Subjects');
-
-            let panel = spawn('div.container', [
-                spawn('div.withColor containerTitle', 'Enter subject details'),
-                spawn('div.containerBody', [
-                    spawn('div.containerItem', 'After selecting a project, define the details of each subject. ' +
-                        'The \'Subject ID\' should be a single word or acronym which will identify your subject and ' +
-                        'cannot contain spaces or special characters.'),
-                    spawn('hr'),
-                    self.projectSelectComponent,
-                    spawn('div.hot-container.containerIterm', [spawn('div.hot-table')]),
-                    self.messageComponent
-                ])
-            ]);
-
-            this.submitButton = spawn('input.btn1.pull-right|type=button|value=Create Subjects', {
-                disabled: true,
-                onclick: () => {
-                    xmodal.confirm({
-                        title: "Confirm Submission",
-                        height: 220,
-                        scroll: false,
-                        content: `<p>Are you ready to submit?</p>`,
-                        okAction: () => self.submit(),
-                    })
-                }
-            });
-
-            let buttons = spawn('div.submit-right', [
-                self.submitButton,
-                spawn('input.btn.pull-right|type=button|value=Enter PDX Details', {
-                    onclick: () => {
-                        xmodal.confirm({
-                            title: "Leave Subject Editor",
-                            height: 150,
-                            scroll: false,
-                            okLabel: 'Yes',
-                            cancelLabel: 'No',
-                            content: `<p>Are you finished? Any unsubmitted data will be lost.</p>`,
-                            okAction: () => {
-                                self.reset();
-                                let project = self.getProjectSelection();
-                                let subjects = self.hot.getDataAtProp('subjectId').filter(s => s !== null && s !== '');
-                                XNAT.plugin.pixi.pdxEntryManager.init(self.containerId, project, subjects);
-                            },
-                        })
-                    }
-                }),
-                spawn('input.btn.pull-right|type=button|value=Enter Cell Line Details', {
-                    onclick: () => {
-                        xmodal.confirm({
-                            title: "Leave Subject Editor",
-                            height: 150,
-                            scroll: false,
-                            okLabel: 'Yes',
-                            cancelLabel: 'No',
-                            content: `<p>Are you finished? Any unsubmitted data will be lost.</p>`,
-                            okAction: () => {
-                                self.reset();
-                                let project = self.getProjectSelection();
-                                let subjects = self.hot.getDataAtProp('subjectId').filter(s => s !== null && s !== '');
-                                XNAT.plugin.pixi.cellLineEntryManager.init(self.containerId, project, subjects);
-                            },
-                        })
-                    }
-                }),
-                spawn('div.clear')
-            ])
-
-            this.container.innerHTML = '';
-            this.container.append(titleEl);
-            this.container.append(panel);
-            this.container.append(buttons);
-
-            XNAT.plugin.pixi.projects.populateSelectBox('project');
-        }
-
-        updateHeight() {
-            let numRows = this.hot.countRows();
-            let height = 26 + 23 * numRows + 4;
-            let container = this.container.querySelector('.hot-container');
-            container.style.height = `${height}px`;
-        }
-
-        reset() {
-            this.container.innerHTML = '';
-        }
-
-        init(containerId) {
-            const self = this;
-
-            this.containerId = containerId;
-            this.spawn();
-
-            // Column headers and widths
+        async init(containerId, project = null, subjects = []) {
             let colHeaders = [
                 "Subject ID *",
                 "Research Group",
@@ -896,29 +741,11 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
             let colWidths = [175, 115, 150, 50, 100, 100, 150, 150, 75, 115, 150, 150];
 
-            // Column validators
-            const subjectValidator = (value, callback) => {
-                if (value == null || value === '') {
-                    callback(true);
-                    return;
-                }
-
-                setTimeout(() => {
-                    let projectId = self.getProjectSelection();
-                    XNAT.plugin.pixi.subjects.get(projectId, value)
-                        .then(() => callback(false))
-                        .catch((e) => {
-                            console.error(e);
-                            callback(true);
-                        });
-                }, 150);
-            }
-
             // Columns
-            this.columns = [
+            let columns = [
                 {
                     data: 'subjectId',
-                    validator: subjectValidator,
+                    validator: (value, callback) => this.validateSubjectId(value, callback),
                     allowInvalid: true
                 },
                 {data: 'researchGroup'},
@@ -954,160 +781,78 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 {data: 'geneticModificationsNonStd'}
             ]
 
-            // Handsontable
-            this.hot = new Handsontable(self.container.querySelector('.hot-table'), {
-                data: [
-                    ["", "", "", "", "", "", "", "", "", "", "", ""],
-                    ["", "", "", "", "", "", "", "", "", "", "", ""],
-                    ["", "", "", "", "", "", "", "", "", "", "", ""],
-                    ["", "", "", "", "", "", "", "", "", "", "", ""],
-                    ["", "", "", "", "", "", "", "", "", "", "", ""]
-                ],
-                rowHeaders: true,
+            let hotSettings = {
                 colHeaders: colHeaders,
-                manualColumnResize: true,
                 colWidths: colWidths,
-                columns: this.columns,
+                columns: columns,
+                rowHeaders: true,
+                manualColumnResize: true,
                 contextMenu: ['row_above', 'row_below', '---------', 'remove_row', '---------', 'undo', 'redo', '---------', 'copy', 'cut'],
-                hiddenColumns: true,
                 width: '100%',
                 licenseKey: 'non-commercial-and-evaluation',
-                afterValidate: (isValid, value, row, prop) => {
-                    let key = `${prop}.${row}`;
+                minRows: 1,
 
-                    if (!isValid) {
-                        if (prop === "subjectId") {
-                            let displayRow = row + 1;
-
-                            // Otherwise presume it matches an existing subject id in the project.
-                            self.errorMessages.set(key, `Row ${displayRow}: ${value} matches an existing subject id in 
-                            ${XNAT.app.displayNames.singular.project.toLowerCase()} ${self.getProjectSelection()}.`);
-                        }
-                    } else {
-                        self.errorMessages.delete(key);
-                    }
-
-                    let isProjectValid = self.validateProjectSelection();
-                    let isEmpty = self.isEmpty();
-                    let isFirstSubject = isEmpty && prop === "subjectId" && value !== null && value !== '';
-
-                    if (self.errorMessages.size > 0) {
-                        let message = spawn('div', [
-                            spawn('p', 'Errors found:'),
-                            spawn('ul', Array.from(self.errorMessages.values()).map(msg => spawn('li', msg)))
-                        ])
-
-                        self.displayMessage('error', message);
-
-                        self.disableSubmitButton();
-                    } else {
-                        self.clearAndHideMessage();
-
-                        // Valid project and ((table is not empty) or (table is empty and this is the first subjectId))
-                        if (isProjectValid && (!isEmpty || isFirstSubject)) self.enableSubmitButton();
-                    }
-                },
-                beforeChange: (changes, source) => {
-                    for (let i = changes.length - 1; i >= 0; i--) {
-                        if (changes[i][1] === 'subjectId') {
-                            if (changes[i][3] !== null) {
-                                // Remove spaces and special characters from subject ids
-                                changes[i][3] = changes[i][3].replaceAll(' ', '_');
-                                changes[i][3] = changes[i][3].replaceAll(/[!@#&?<>()*$%]/g, "_");
-
-                                // Append _1, _2, _3, ... to the subject ids to prevent entry of duplicate id's
-                                let counter = 1;
-                                if (changes[i][2] !== changes[i][3]) { // If the data changed
-                                    while (self.hot.getDataAtProp('subjectId').contains(changes[i][3])) {
-                                        if (counter === 1) {
-                                            changes[i][3] = `${changes[i][3]}_${counter}`;
-                                        } else {
-                                            changes[i][3] = changes[i][3].slice(0, -1).concat(counter);
-                                        }
-                                        counter = counter + 1;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-
-            this.initSpeciesSelector();
-            this.initVendorSelector();
-            this.addKeyboardShortCuts();
-
-            // Place cursor at first cell
-            this.hot.selectCell(0, 0, 0, 0);
-
-            this.updateHeight();
-            this.hot.addHook('afterCreateRow', (index, amount, source) => self.updateHeight());
-            this.hot.addHook('afterRemoveRow', (index, amount, physicalRows, source) => self.updateHeight());
-        }
-
-        addKeyboardShortCuts() {
-            const self = this;
-
-            // Add new keyboard shortcut for inserting a row
-            this.hot.updateSettings({
-                afterDocumentKeyDown: function (e) {
-                    if (self.lastKey === 'Control' && e.key === 'n') {
-                        let row = self.hot.getSelected()[0][0];
-                        self.hot.alter('insert_row_above', (row + 1), 1)
-                    }
-                    self.lastKey = e.key;
-                }
-            });
-        }
-
-        removeKeyboardShortCuts() {
-            const self = this;
-
-            // Add new keyboard shortcut for inserting a row
-            this.hot.updateSettings({
-                afterDocumentKeyDown: function (e) {
-                    self.lastKey = e.key;
-                }
-            });
-        }
-
-        getProjectSelection() {
-            const self = this;
-            return self.projectSelectComponent.getElementsByTagName('select')[0].value;
-        }
-
-        disableProjectSelection() {
-            const self = this;
-            self.projectSelectComponent.getElementsByTagName('select')[0].disabled = true
-        }
-
-        validateProjectSelection() {
-            const self = this;
-
-            if (self.getProjectSelection() === '') {
-                self.projectSelectComponent.classList.add('invalid')
-                self.projectSelectComponent.querySelector('.prj-error').style.display = '';
-                return false;
-            } else {
-                self.projectSelectComponent.classList.remove('invalid');
-                self.projectSelectComponent.querySelector('.prj-error').style.display = 'none'
-                return true;
             }
+
+            return super.init(containerId, hotSettings, project, subjects)
+                .then(() => this.initSpeciesSelector())
+                .then(() => this.initVendorSelector())
+                .then(() => {
+                    if (project !== null && project !== undefined && project !== '') {
+                        this.setProjectSelection(project)
+                        this.disableProjectSelection();
+                    }
+                })
+                .then(() => this.hot.addHook('beforeChange', (changes, source) => this.beforeChange(changes, source)))
+                .then(() => this.hot.addHook('afterValidate', (isValid, value, row, prop)=> this.afterValidate(isValid, value, row, prop)));
         }
 
-        enableSubmitButton() {
+        additionalButtons() {
             const self = this;
-            self.submitButton.disabled = false;
-        }
 
-        disableSubmitButton() {
-            const self = this;
-            self.submitButton.disabled = true;
+            let buttons = super.additionalButtons();
+
+            buttons.push(
+                spawn('input.btn.pull-right|type=button|value=Enter PDX Details', {
+                    onclick: () => {
+                        xmodal.confirm({
+                            title: "Leave Subject Editor",
+                            height: 150,
+                            scroll: false,
+                            okLabel: 'Yes',
+                            cancelLabel: 'No',
+                            content: `<p>Are you finished? Any unsubmitted data will be lost.</p>`,
+                            okAction: () => {
+                                let project = self.getProjectSelection();
+                                let subjects = self.hot.getDataAtProp('subjectId').filter(s => s !== null && s !== '');
+                                XNAT.plugin.pixi.pdxEntryManager.init(self.containerId, project, subjects);
+                            },
+                        })
+                    }
+                }),
+                spawn('input.btn.pull-right|type=button|value=Enter Cell Line Details', {
+                    onclick: () => {
+                        xmodal.confirm({
+                            title: "Leave Subject Editor",
+                            height: 150,
+                            scroll: false,
+                            okLabel: 'Yes',
+                            cancelLabel: 'No',
+                            content: `<p>Are you finished? Any unsubmitted data will be lost.</p>`,
+                            okAction: () => {
+                                let project = self.getProjectSelection();
+                                let subjects = self.hot.getDataAtProp('subjectId').filter(s => s !== null && s !== '');
+                                XNAT.plugin.pixi.cellLineEntryManager.init(self.containerId, project, subjects);
+                            },
+                        })
+                    }
+                })
+            )
+
+            return buttons;
         }
 
         initSpeciesSelector() {
-            const self = this;
-
             XNAT.plugin.pixi.speices.get().then(species => {
                 let options = [];
 
@@ -1116,98 +861,135 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     options.push(specie['scientificName'])
                 });
 
-                self.columns[2]['source'] = options;
-                self.hot.updateSettings({columns: self.columns});
+                let columns = this.getColumns();
+                columns[2]['source'] = options;
+                this.hot.updateSettings({columns: columns});
             })
         }
 
         initVendorSelector() {
-            const self = this;
-
             XNAT.plugin.pixi.vendors.get().then(vendors => {
                 let options = [];
 
                 vendors.sort(pixi.compareGenerator('vendor'));
                 vendors.forEach(vendor => options.push(vendor['vendor']));
 
-                self.columns[7]['source'] = options;
-                self.hot.updateSettings({columns: self.columns});
+                let columns = this.getColumns();
+                columns[7]['source'] = options;
+                this.hot.updateSettings({columns: columns});
             });
         }
 
-        isEmpty() {
-            const self = this;
+        validateSubjectId(subjectId, callback) {
+            let isEmpty = (item) => item === null || item === undefined || item === '';
 
-            //let isTableEmpty = self.hot.countEmptyRows() === self.hot.countRows();
-            let isSubjectIdsEmpty = self.hot.isEmptyCol(0);
+            if (isEmpty(subjectId)) {
+                callback(false);
+                return;
+            }
 
-            return isSubjectIdsEmpty
+            setTimeout(() => {
+                let projectId = this.getProjectSelection();
+                XNAT.plugin.pixi.subjects.get(projectId, subjectId)
+                    .then(() => callback(false))
+                    .catch(() => callback(true));
+            }, 150);
         }
 
-        clearAndHideMessage() {
-            const self = this;
-            self.messageComponent.style.display = 'none';
-            self.messageComponent.innerHTML = '';
-            self.messageComponent.classList.remove('success');
-            self.messageComponent.classList.remove('error');
-            self.messageComponent.classList.remove('warning');
-            self.messageComponent.classList.remove('info');
+        beforeChange(changes, source) {
+            for (let i = changes.length - 1; i >= 0; i--) {
+                if (changes[i][1] === 'subjectId') {
+                    if (changes[i][3] !== null && changes[i][3] !== undefined && changes[i][3] !== '') {
+                        // Remove spaces and special characters from subject ids
+                        changes[i][3] = changes[i][3].replaceAll(' ', '_');
+                        changes[i][3] = changes[i][3].replaceAll(/[!@#&?<>()*$%]/g, "_");
+
+                        // Append _1, _2, _3, ... to the subject ids to prevent entry of duplicate id's
+                        let counter = 1;
+                        if (changes[i][2] !== changes[i][3]) { // If the data changed
+                            while (this.hot.getDataAtProp('subjectId').contains(changes[i][3])) {
+                                if (counter === 1) {
+                                    changes[i][3] = `${changes[i][3]}_${counter}`;
+                                } else {
+                                    changes[i][3] = changes[i][3].slice(0, -1).concat(counter);
+                                }
+                                counter = counter + 1;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        displayMessage(type, message) {
-            const self = this;
-            self.messageComponent.style.display = '';
-            self.messageComponent.innerHTML = '';
-            self.messageComponent.classList.add(type);
-            self.messageComponent.append(message)
+        afterValidate(isValid, value, row, prop) {
+            let key = `${prop}.${row}`;
+
+            if (!isValid) {
+                let displayRow = row + 1;
+
+                if (prop === "subjectId") {
+                    if (value !== null && value !== undefined && value !== '') {
+                        // Failed because it matches an existing subject
+                        this.errorMessages.set(key, `${value} matches an existing subject id in 
+                            ${XNAT.app.displayNames.singular.project.toLowerCase()} ${this.getProjectSelection()}.`);
+                    } else {
+                        this.errorMessages.delete(key);
+                    }
+                }
+            } else {
+                this.errorMessages.delete(key);
+            }
+
+            if (this.errorMessages.size > 0) {
+                let message = spawn('div', [
+                    spawn('p', 'Errors found:'),
+                    spawn('ul', Array.from(this.errorMessages.values()).map(msg => spawn('li', msg)))
+                ])
+
+                this.displayMessage('error', message);
+            } else {
+                this.clearAndHideMessage();
+            }
         }
 
         async submit() {
-            const self = this;
-
-            console.debug('Submitting.')
+            console.debug('Submitting')
 
             if (!this.validateProjectSelection()) {
                 console.error('Invalid project selection.');
                 return;
             }
 
-            if (self.isEmpty()) {
+            if (this.isEmpty()) {
                 console.debug('Nothing to submit.');
                 return;
             }
 
-            if (self.errorMessages.size > 0) {
-                console.error('Cannot submit with invalid data.');
-                return;
-            }
+            this.hot.validateCells(async (valid) => {
+                if (!valid) {
+                    let message = spawn('div', [
+                        spawn('p', 'Invalid inputs. Please correct before resubmitting.'),
+                    ])
 
-            XNAT.ui.dialog.static.wait('Submitting to XNAT', {id: "create_subjects"});
+                    this.displayMessage('error', message);
 
-            let projectId = this.getProjectSelection();
-            let subjects = [];
+                    return;
+                }
 
-            let successfulRows = [];
-            let failedRows = [];
-            let emptyRows = [];
+                // Everything is valid, remove old messages
+                this.clearAndHideMessage();
 
-            for (let iRow = 0; iRow < this.hot.countRows(); iRow++) {
-                let subjectLabel = this.hot.getDataAtRowProp(iRow, 'subjectId');
-                const hasSubjectId = !(subjectLabel === null || subjectLabel === undefined || subjectLabel === '');
-                const isEmptyRow = this.hot.isEmptyRow(iRow)
-                const isNotEmptyRow = !isEmptyRow
+                XNAT.ui.dialog.static.wait('Submitting to XNAT', {id: "submit_form"});
 
-                if (!hasSubjectId && isNotEmptyRow) {
-                    failedRows.push(
-                        {
-                            'subjectId': '',
-                            'row': iRow,
-                            'error': 'Id field is missing but row is not empty.'
-                        }
-                    )
-                } else if (isEmptyRow) {
-                    emptyRows.push(iRow);
-                } else if (hasSubjectId) {
+                let projectId = this.getProjectSelection();
+                let subjects = [];
+
+                let successfulRows = [];
+                let failedRows = [];
+
+                for (let iRow = 0; iRow < this.hot.countRows(); iRow++) {
+                    let subjectLabel = this.hot.getDataAtRowProp(iRow, 'subjectId');
+
                     let researchGroup = this.hot.getDataAtRowProp(iRow, 'researchGroup');
                     let species = this.hot.getDataAtRowProp(iRow, 'species');
                     let sex = this.hot.getDataAtRowProp(iRow, 'sex');
@@ -1220,88 +1002,94 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     let geneticModifications = this.hot.getDataAtRowProp(iRow, 'geneticModifications');
                     let geneticModificationsNonStd = this.hot.getDataAtRowProp(iRow, 'geneticModificationsNonStd');
 
-                    try {
-                        let url = await XNAT.plugin.pixi.subjects.createOrUpdate(projectId, subjectLabel,
-                            researchGroup, species, sex, dob, litter, strain, source, stockNumber, humanizationType,
-                            geneticModifications, geneticModificationsNonStd);
-
-                        successfulRows.push(iRow)
-                        subjects.push({
-                            'subjectId': subjectLabel,
-                            'url': url
-                        });
-                    } catch (e) {
-                        failedRows.push(
-                            {
+                    await XNAT.plugin.pixi.subjects.createOrUpdate(projectId, subjectLabel, researchGroup, species,
+                        sex, dob, litter, strain, source, stockNumber, humanizationType, geneticModifications,
+                        geneticModificationsNonStd)
+                        .then(url => {
+                            successfulRows.push(iRow)
+                            subjects.push({
                                 'subjectId': subjectLabel,
-                                'row': iRow,
-                                'error': e
-                            }
-                        )
-                    }
+                                'url': url
+                            });
+
+                            return url;
+                        })
+                        .catch(error => {
+                            console.error(`Error creating subject: ${error}`);
+
+                            failedRows.push(
+                                {
+                                    'subjectId': subjectLabel,
+                                    'row': iRow,
+                                    'error': error
+                                }
+                            )
+
+                            return error;
+                        })
                 }
-            }
 
-            // Disable new inputs to successful rows
-            this.hot.updateSettings({
-                cells: function (row, col) {
-                    var cellProperties = {};
+                XNAT.ui.dialog.close('submit_form');
 
-                    if (successfulRows.contains(row)) {
-                        cellProperties.readOnly = true;
-                    } else if (emptyRows.contains(row)) {
-                        cellProperties.readOnly = true;
-                    }
+                // Disable new inputs to successful rows
+                this.hot.updateSettings({
+                    cells: function (row, col) {
+                        var cellProperties = {};
 
-                    return cellProperties;
-                },
-                contextMenu: ['copy', 'cut'],
+                        if (successfulRows.contains(row)) {
+                            cellProperties.readOnly = true;
+                        }
+
+                        return cellProperties;
+                    },
+                    contextMenu: ['copy', 'cut'],
+                });
+
+                this.removeKeyboardShortCuts();
+                this.disableProjectSelection();
+
+                if (failedRows.length === 0) {
+                    // Success
+                    let message = spawn('div', [
+                        spawn('p', 'Successful submissions:'),
+                        spawn('ul', subjects.map(subject => spawn('li', [spawn(`a`, {
+                            href: subject['url'],
+                            target: '_BLANK'
+                        }, subject['subjectId'])])))
+                    ])
+
+                    this.displayMessage('success', message);
+
+                    // Disable resubmissions
+                    this.disableSubmitButton();
+                } else if (successfulRows.length === 0 && failedRows.length > 0) {
+                    // All submissions in error
+                    let message = spawn('div', [
+                        spawn('p', ''),
+                        spawn('p', 'There were errors with your submission. Correct the issues and try resubmitting.'),
+                        spawn('ul', failedRows.map(subject => spawn('li', `Row: ${subject['row'] + 1} ${XNAT.app.displayNames.singular.subject} ID: ${subject['subjectId']} ${subject['error']}`))),
+                    ])
+
+                    this.displayMessage('error', message);
+                } else if (successfulRows.length > 0 && failedRows.length > 0) {
+                    // Some submitted successfully, some failed
+                    let message = spawn('div', [
+                        spawn('p', 'There were errors with your submission. Correct the issues and try resubmitting.'),
+                        spawn('p', 'Error(s):'),
+                        spawn('ul', failedRows.map(subject => spawn('li', `Row: ${subject['row'] + 1} ${XNAT.app.displayNames.singular.subject} ID: ${subject['subjectId']} ${subject['error']}`))),
+                        spawn('p', 'Successful submissions:'),
+                        spawn('ul', subjects.map(subject => spawn('li', [spawn(`a`, {
+                            href: subject['url'],
+                            target: '_BLANK'
+                        }, subject['subjectId'])])))
+                    ])
+
+                    this.displayMessage('warning', message);
+                }
+
+                XNAT.ui.dialog.close('submit_form');
+
             });
-
-            this.removeKeyboardShortCuts();
-            this.disableProjectSelection();
-
-            XNAT.ui.dialog.close('create_subjects');
-
-            const nonEmptyRows = this.hot.countRows() - this.hot.countEmptyRows();
-            if (nonEmptyRows === successfulRows.length) { // All submissions successful
-                // Display success message
-                let message = spawn('div', [
-                    spawn('p', 'Successful submissions:'),
-                    spawn('ul', subjects.map(subject => spawn('li', [spawn(`a`, {
-                        href: subject['url'],
-                        target: '_BLANK'
-                    }, subject['subjectId'])])))
-                ])
-
-                self.displayMessage('success', message);
-
-                // Disable resubmissions
-                this.disableSubmitButton();
-            } else if (successfulRows.length === 0 && failedRows.length > 0) {
-                // All submissions in error
-                let message = spawn('div', [
-                    spawn('p', ''),
-                    spawn('p', 'There were errors with your submission. Correct the issues and try resubmitting.'),
-                    spawn('ul', failedRows.map(subject => spawn('li', `Row: ${subject['row'] + 1} ${XNAT.app.displayNames.singular.subject} ID: ${subject['subjectId']} ${subject['error']}`))),
-                ])
-
-                self.displayMessage('error', message);
-            } else if (successfulRows.length > 0 && failedRows.length > 0) {
-                // Some submitted successfully, some failed
-                let message = spawn('div', [
-                    spawn('p', 'There were errors with your submission. Correct the issues and try resubmitting.'),
-                    spawn('p', 'Error(s):'),
-                    spawn('ul', failedRows.map(subject => spawn('li', `Row: ${subject['row'] + 1} ${XNAT.app.displayNames.singular.subject} ID: ${subject['subjectId']} ${subject['error']}`))),
-                    spawn('p', 'Successful submissions:'),
-                    spawn('ul', subjects.map(subject => spawn('li', [spawn(`a`, {
-                        href: subject['url'],
-                        target: '_BLANK'
-                    }, subject['subjectId'])])))
-                ])
-
-                self.displayMessage('warning', message);
-            }
         }
     }
 
