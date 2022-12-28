@@ -8,13 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/pikaday@1.8.2/pikaday.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pikaday@1.8.2/css/pikaday.css">
 
-<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-module.js')"></script>
-<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-projects.js')"></script>
-<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-subjects.js')"></script>
-<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-speciesPreferences.js')"></script>
-<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-vendorPreferences.js')"></script>
-<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-subjectEntryManager.js')"></script>
-<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-pdxEntryManager.js')"></script>
+#parse("/screens/PixiImports.vm")
 
 <style>
     div.form-component {
@@ -61,7 +55,7 @@
     .hot-container {
         overflow: hidden;
         margin: 2rem 10px;
-        height: 525px;
+        height: 330px;
     }
 
     .error, .success, .info, .warning {
@@ -89,3 +83,5 @@
 <script type="text/javascript">
     XNAT.plugin.pixi.subjectEntryManager.init('subject-entry-manager');
 </script>
+
+<!-- END pixi-plugin templates/screens/NewSubjects.vm -->

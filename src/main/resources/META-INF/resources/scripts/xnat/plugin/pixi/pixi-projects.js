@@ -51,13 +51,22 @@ XNAT.plugin.pixi.projects = getObject(XNAT.plugin.pixi.projects || {});
                 projectSelectorEl.options.length = 0;
 
                 // Placeholder
-                //projectSelectorEl.options[0] = new Option("Select " + XNAT.app.displayNames.singular.project, "");
                 projectSelectorEl.options[0] = new Option("");
                 projectSelectorEl.options[0].disabled = true;
                 projectSelectorEl.options[0].selected = true;
 
+                const urlParams = new URLSearchParams(window.location.search);
+                const projectParam = urlParams.get('project');
+
                 projects.forEach(project => {
-                    projectSelectorEl.options[projectSelectorEl.length] = new Option(project['id'], project['id'])
+                    let projectOption = new Option(project['id'], project['id']);
+                    projectSelectorEl.options[projectSelectorEl.length] = projectOption
+
+                    // If project was provided in url query string then select it.
+                    if (project['id'] === projectParam) {
+                        projectOption.selected = true;
+                    }
+
                 })
             });
     }

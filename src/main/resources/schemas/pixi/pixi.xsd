@@ -111,11 +111,6 @@
                         <xs:element name="sourceId" type="xs:string">
                             <xs:annotation>
                                 <xs:documentation>ID of the Cell Line at it's source (not the internal XNAT/Hibernate ID)</xs:documentation>
-                                <xs:appinfo>
-                                    <xdat:field>
-                                        <xdat:relation foreignKeyTable="xhbm_cell_line_entity" foreignKeyName="xft_cell_line_sourceId" foreignCol="source_id"/>
-                                    </xdat:field>
-                                </xs:appinfo>
                             </xs:annotation>
                         </xs:element>
                         <xs:element name="injectionSite" type="xs:string" minOccurs="0"/>
@@ -137,11 +132,6 @@
                     <xs:element name="sourceId" type="xs:string">
                         <xs:annotation>
                             <xs:documentation>ID of the PDX at it's source (not the internal XNAT/Hibernate ID)</xs:documentation>
-                            <xs:appinfo>
-                                <xdat:field>
-                                    <xdat:relation foreignKeyTable="xhbm_pdxentity" foreignKeyName="xft_pdx_sourceId" foreignCol="source_id"/>
-                                </xdat:field>
-                            </xs:appinfo>
                         </xs:annotation>
                     </xs:element>
                     <xs:element name="injectionSite" type="xs:string" minOccurs="0"/>

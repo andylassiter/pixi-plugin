@@ -1,0 +1,12 @@
+<!-- BEGIN pixi-plugin templates/screens/PixiImports.vm -->
+
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-module.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-projects.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-subjects.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-experiments.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-speciesPreferences.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-vendorPreferences.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-xenograft.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-subjectEntryManager.js')"></script>
+
+<!-- END pixi-plugin templates/screens/PixiImports.vm -->

@@ -38,7 +38,25 @@ XNAT.plugin.pixi.subjects = getObject(XNAT.plugin.pixi.subjects || {});
             throw new Error("Subject does not exist.");
         }
 
-        return response.json()
+        return response.json();
+    }
+
+    XNAT.plugin.pixi.subjects.getAll = async function(projectId) {
+        console.debug(`pixi-subjects.js: XNAT.plugin.pixi.subjects.getAll`);
+
+        let subjectUrl = XNAT.url.restUrl(`/data/projects/${projectId}/subjects`);
+        subjectUrl = XNAT.url.addQueryString(subjectUrl, ['format=json']);
+
+        const response = await fetch(subjectUrl, {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json'}
+        })
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch subjects.");
+        }
+
+        return response.json();
     }
 
     XNAT.plugin.pixi.subjects.createOrUpdate = async function(projectId, subjectLabel, researchGroup = null, species = null,
