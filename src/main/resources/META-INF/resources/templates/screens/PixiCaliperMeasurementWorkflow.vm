@@ -1,5 +1,5 @@
-<!-- BEGIN pixi-plugin templates/screens/NewSubjects.vm -->
-<div id="subject-entry-manager"></div>
+<!-- BEGIN pixi-plugin templates/screens/PixiCaliperMeasurementWorkflow.vm -->
+<div id="caliper-measurements-container"></div>
 
 #parse("/screens/handsontable_includes.vm")
 #parse("/screens/PixiImports.vm")
@@ -75,7 +75,8 @@
 </style>
 
 <script type="text/javascript">
-    XNAT.plugin.pixi.subjectEntryManager.init('subject-entry-manager', XNAT.data.context.projectID);
+    let CaliperMeasurementManager = new XNAT.plugin.pixi.caliperMeasurementManager();
+    CaliperMeasurementManager.init("caliper-measurements-container", XNAT.data.context.projectID);
 </script>
 
-<!-- END pixi-plugin templates/screens/NewSubjects.vm -->
+<!-- END pixi-plugin templates/screens/PixiCaliperMeasurementWorkflow.vm -->

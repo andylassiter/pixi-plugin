@@ -12,6 +12,7 @@ XNAT.plugin.pixi = getObject(XNAT.plugin.pixi || {});
 XNAT.plugin.pixi.experiments = getObject(XNAT.plugin.pixi.experiments || {});
 XNAT.plugin.pixi.experiments.cellLine = getObject(XNAT.plugin.pixi.experiments.cellLine || {});
 XNAT.plugin.pixi.experiments.pdx = getObject(XNAT.plugin.pixi.experiments.pdx || {});
+XNAT.plugin.pixi.experiments.caliperMeasurement = getObject(XNAT.plugin.pixi.experiments.caliperMeasurement || {});
 
 (function(factory) {
     if (typeof define === 'function' && define.amd) {
@@ -38,7 +39,7 @@ XNAT.plugin.pixi.experiments.pdx = getObject(XNAT.plugin.pixi.experiments.pdx ||
         } else {
             // If no experiment label, try to create one as SubjectID_CL_##
             if (experimentLabel === null || experimentLabel === '') {
-                let response = await fetch(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments`, {method: 'GET'});
+                let response = await fetch(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments?xsiType=pixi:cellLineData`, {method: 'GET'});
 
                 if (!response.ok) {
                     throw new Error(`Error fetching cell line experiments for subject ${subjectLabel}: ${response.statusText}`);
@@ -94,7 +95,7 @@ XNAT.plugin.pixi.experiments.pdx = getObject(XNAT.plugin.pixi.experiments.pdx ||
         } else {
             // If no experiment label, try to create one as SubjectID_PDX_##
             if (experimentLabel === null || experimentLabel === '') {
-                let response = await fetch(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments`, {method: 'GET'});
+                let response = await fetch(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments?xsiType=pixi:pdxData`, {method: 'GET'});
 
                 if (!response.ok) {
                     throw new Error(`Error fetching pdx experiments for subject ${subjectLabel}: ${response.statusText}`);
@@ -134,6 +135,66 @@ XNAT.plugin.pixi.experiments.pdx = getObject(XNAT.plugin.pixi.experiments.pdx ||
 
         if (!response.ok) {
             throw new Error(`Error creating pdx experiment ${experimentLabel} for subject ${subjectLabel}: ${response.statusText}`);
+        }
+
+        return response.text();
+    }
+
+    XNAT.plugin.pixi.experiments.caliperMeasurement.createOrUpdate = async function(
+        projectId, subjectLabel, experimentId, experimentLabel, measurementDate, measurementTime, technician,
+        tumorLength, tumorWidth, subjectWeight, notes) {
+
+        console.debug(`pixi-experiments.js: XNAT.plugin.pixi.experiments.caliperMeasurement.createOrUpdate`);
+
+        let experimentUrl;
+
+        if (XNAT.validate().val(experimentId).check('notEmpty')) {
+            experimentUrl = XNAT.url.csrfUrl(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments/${experimentId}`);
+        } else {
+            // If no experiment label, try to create one as SubjectID_CM_##
+            if (!XNAT.validate().val(experimentLabel).check('notEmpty')) {
+                let response = await fetch(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments?xsiType=pixi:caliperMeasurementData`, {method: 'GET'});
+
+                if (!response.ok) {
+                    throw new Error(`Error fetching cell line experiments for subject ${subjectLabel}: ${response.statusText}`);
+                }
+
+                let json = await response.json();
+                let numExperiments = json['ResultSet']['Result'].length + 1;
+                experimentLabel = `${subjectLabel}_CM_${numExperiments}`;
+            }
+
+            experimentUrl = XNAT.url.csrfUrl(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments/${experimentLabel}`);
+        }
+
+        let queryString = []
+        let addQueryString = (xmlPath, data) => {
+            if (data !== null && data !== undefined) {
+                let encodedXmlPath = XNAT.url.encodeURIComponent(xmlPath);
+                let encodedData = XNAT.url.encodeURIComponent(data);
+                queryString.push(`${encodedXmlPath}=${encodedData}`)
+            }
+        }
+
+        addQueryString('xsiType', 'pixi:caliperMeasurementData');
+
+        addQueryString('xnat:experimentData/date', measurementDate);
+        addQueryString('xnat:experimentData/time', measurementTime);
+        addQueryString('xnat:experimentData/note',  notes);
+
+        addQueryString('pixi:caliperMeasurementData/technician', technician);
+        addQueryString('pixi:caliperMeasurementData/length', tumorLength);
+        addQueryString('pixi:caliperMeasurementData/width', tumorWidth);
+        addQueryString('pixi:caliperMeasurementData/unit', 'mm');
+        addQueryString('pixi:caliperMeasurementData/weight', subjectWeight);
+        addQueryString('pixi:caliperMeasurementData/weightUnit', 'g');
+
+        experimentUrl = XNAT.url.addQueryString(experimentUrl, queryString);
+
+        let response = await fetch(experimentUrl, {method: 'PUT'});
+
+        if (!response.ok) {
+            throw new Error(`Error create/update of pixi:caliperMeasurementData ${experimentLabel} for subject ${subjectLabel}: ${response.statusText}`);
         }
 
         return response.text();

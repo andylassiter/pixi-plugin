@@ -55,18 +55,14 @@ XNAT.plugin.pixi.projects = getObject(XNAT.plugin.pixi.projects || {});
                 projectSelectorEl.options[0].disabled = true;
                 projectSelectorEl.options[0].selected = true;
 
-                const urlParams = new URLSearchParams(window.location.search);
-                const projectParam = urlParams.get('project');
-
                 projects.forEach(project => {
                     let projectOption = new Option(project['id'], project['id']);
                     projectSelectorEl.options[projectSelectorEl.length] = projectOption
 
-                    // If project was provided in url query string then select it.
-                    if (project['id'] === projectParam) {
+                    if (XNAT.data.context.projectID && project['id'] === XNAT.data.context.projectID) {
+                        // If project is set in the XNAT context then select it.
                         projectOption.selected = true;
                     }
-
                 })
             });
     }

@@ -22,7 +22,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
     console.log('pixi-subjectEntryManager.js - SubjectEntryManager');
 
-    class AbstractBulkEntryManager {
+    XNAT.plugin.pixi.abstractBulkEntryManager = class AbstractBulkEntryManager {
         containerId;
         container;
 
@@ -282,13 +282,13 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
         updateHeight() {
             let numRows = this.hot.countRows();
-            let height = 26 + 23 * numRows + 4;
+            let height = 26 + 23 * (numRows + 2);
             let container = this.container.querySelector('.hot-container');
             container.style.height = `${height}px`;
         }
     }
 
-    class AbstractXenograftEntryManager extends AbstractBulkEntryManager {
+    class AbstractXenograftEntryManager extends XNAT.plugin.pixi.abstractBulkEntryManager {
 
         constructor(heading, subheading, description) {
             super(heading, subheading, description);
@@ -713,7 +713,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
     }
 
-    class SubjectEntryManager extends AbstractBulkEntryManager {
+    class SubjectEntryManager extends XNAT.plugin.pixi.abstractBulkEntryManager {
 
         constructor() {
             super("New Subjects",
@@ -1093,6 +1093,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
     }
 
+    // XNAT.plugin.pixi.abstractBulkEntryManager = AbstractBulkEntryManager;
     XNAT.plugin.pixi.subjectEntryManager = new SubjectEntryManager();
     XNAT.plugin.pixi.cellLineEntryManager = new CellLineEntryManager();
     XNAT.plugin.pixi.pdxEntryManager = new PdxEntryManager();
