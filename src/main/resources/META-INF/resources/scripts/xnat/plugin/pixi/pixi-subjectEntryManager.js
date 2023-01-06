@@ -79,7 +79,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         async render() {
             const self = this;
 
-            this.projectSelectComponent = spawn('div.form-component.containerItem', [
+            this.projectSelectComponent = spawn('div.form-component.containerItem.third', [
                 spawn('label.required|for=\'project\'', 'Select a Project'),
                 spawn('select.form-control', {
                         id: 'project',
@@ -103,6 +103,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     spawn('div.containerItem', self.#description),
                     spawn('hr'),
                     self.projectSelectComponent,
+                    ...self.additionalComponents(),
                     spawn('div.hot-container.containerIterm', [spawn('div.hot-table')]),
                     self.messageComponent
                 ])
@@ -135,6 +136,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
 
         additionalButtons() { return []; }
+        additionalComponents() { return []; }
 
         addKeyboardShortCuts() {
             const self = this;

@@ -17,7 +17,7 @@
     <a class="yuimenuitemlabel" href="#insertbox">PIXI Tools</a>
     <div id="insertbox" class="yuimenu">
         <div class="bd">
-            <ul class="first-of-type" style="width: 170px;">
+            <ul class="first-of-type" style="width: 270px;">
                 <li class="yuimenuitem">
                     <a class="yuimenuitemlabel" href="$link.setPage("NewSubjects.vm").addPathInfo('project',$project.getId())">Subject Manager</a>
                 </li>
@@ -25,7 +25,10 @@
                     <a class="yuimenuitemlabel" href="$link.setPage("XDATScreen_edit_pixi_hotelScanRecord.vm").addPathInfo('project',$project.getId())">Record New Hotel Scan</a>
                 </li>
                 <li class="yuimenuitem">
-                    <a class="yuimenuitemlabel" href="$link.setPage("PixiCaliperMeasurementWorkflow.vm").addPathInfo('project',$project.getId())">Caliper Measurements Tool</a>
+                    <a class="yuimenuitemlabel" href="$link.setPage("PixiCaliperMeasurementWorkflow.vm").addPathInfo('project',$project.getId())">Caliper Measurements Manager</a>
+                </li>
+                <li class="yuimenuitem">
+                    <a class="yuimenuitemlabel" href="$link.setPage("Pixi_Drug_Therapies.vm").addPathInfo('project',$project.getId())">Drug Therapy Manager</a>
                 </li>
             </ul>
         </div>

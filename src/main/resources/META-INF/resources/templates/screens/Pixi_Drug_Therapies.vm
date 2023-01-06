@@ -1,13 +1,13 @@
 <!-- BEGIN pixi-plugin templates/screens/PixiCaliperMeasurementWorkflow.vm -->
-<div id="caliper-measurements-container"></div>
+<div id="pixi-container"></div>
 
 #parse("/screens/handsontable_includes.vm")
 #parse("/screens/PixiImports.vm")
 #parse("/screens/Pixi_Bulk_Entry_CSS.vm")
 
 <script type="text/javascript">
-    let CaliperMeasurementManager = new XNAT.plugin.pixi.caliperMeasurementManager();
-    CaliperMeasurementManager.init("caliper-measurements-container", XNAT.data.context.projectID);
+    let drugTherapiesManager = new XNAT.plugin.pixi.drugTherapiesManager();
+    drugTherapiesManager.init("pixi-container", XNAT.data.context.projectID);
 </script>
 
 <!-- END pixi-plugin templates/screens/PixiCaliperMeasurementWorkflow.vm -->

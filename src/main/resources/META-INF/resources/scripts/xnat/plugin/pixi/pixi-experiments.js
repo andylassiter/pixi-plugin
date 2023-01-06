@@ -13,6 +13,7 @@ XNAT.plugin.pixi.experiments = getObject(XNAT.plugin.pixi.experiments || {});
 XNAT.plugin.pixi.experiments.cellLine = getObject(XNAT.plugin.pixi.experiments.cellLine || {});
 XNAT.plugin.pixi.experiments.pdx = getObject(XNAT.plugin.pixi.experiments.pdx || {});
 XNAT.plugin.pixi.experiments.caliperMeasurement = getObject(XNAT.plugin.pixi.experiments.caliperMeasurement || {});
+XNAT.plugin.pixi.experiments.drugTherapy = getObject(XNAT.plugin.pixi.experiments.drugTherapy || {});
 
 (function(factory) {
     if (typeof define === 'function' && define.amd) {
@@ -148,11 +149,11 @@ XNAT.plugin.pixi.experiments.caliperMeasurement = getObject(XNAT.plugin.pixi.exp
 
         let experimentUrl;
 
-        if (XNAT.validate().val(experimentId).check('notEmpty')) {
+        if (experimentId) {
             experimentUrl = XNAT.url.csrfUrl(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments/${experimentId}`);
         } else {
             // If no experiment label, try to create one as SubjectID_CM_##
-            if (!XNAT.validate().val(experimentLabel).check('notEmpty')) {
+            if (!experimentLabel) {
                 let response = await fetch(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments?xsiType=pixi:caliperMeasurementData`, {method: 'GET'});
 
                 if (!response.ok) {
@@ -195,6 +196,74 @@ XNAT.plugin.pixi.experiments.caliperMeasurement = getObject(XNAT.plugin.pixi.exp
 
         if (!response.ok) {
             throw new Error(`Error create/update of pixi:caliperMeasurementData ${experimentLabel} for subject ${subjectLabel}: ${response.statusText}`);
+        }
+
+        return response.text();
+    }
+    
+    XNAT.plugin.pixi.experiments.drugTherapy.createOrUpdate = async function ({
+                                                                                  project, subject, experimentId,
+                                                                                  experimentLabel, date, time,
+                                                                                  technician, drug, dose, doseUnit,
+                                                                                  route, site, lotNumber, subjectWeight,
+                                                                                  notes
+                                                                              }) {
+        
+        console.debug(`pixi-experiments.js: XNAT.plugin.pixi.experiments.drugTherapy.createOrUpdate`);
+
+        let experimentUrl;
+
+        if (experimentId) {
+            experimentUrl = XNAT.url.csrfUrl(`/data/projects/${project}/subjects/${subject}/experiments/${experimentId}`);
+        } else {
+            // If no experiment label, try to create one as SubjectID_DT_##
+            if (!experimentLabel) {
+                let response = await fetch(`/data/projects/${project}/subjects/${subject}/experiments?xsiType=pixi:drugTherapyData`, {method: 'GET'});
+
+                if (!response.ok) {
+                    throw new Error(`Error fetching pixi:drugTherapyData for subject ${subject}: ${response.statusText}`);
+                }
+
+                let json = await response.json();
+                let numExperiments = json['ResultSet']['Result'].length + 1;
+                experimentLabel = `${subject}_DT_${numExperiments}`;
+            }
+
+            experimentUrl = XNAT.url.csrfUrl(`/data/projects/${project}/subjects/${subject}/experiments/${experimentLabel}`);
+        }
+
+        let queryString = []
+        let addQueryString = (xmlPath, data) => {
+            if (data !== null && data !== undefined) {
+                let encodedXmlPath = XNAT.url.encodeURIComponent(xmlPath);
+                let encodedData = XNAT.url.encodeURIComponent(data);
+                queryString.push(`${encodedXmlPath}=${encodedData}`)
+            }
+        }
+
+        addQueryString('xsiType', 'pixi:drugTherapyData');
+
+        addQueryString('xnat:experimentData/date', date);
+        addQueryString('xnat:experimentData/time', time);
+        addQueryString('xnat:experimentData/note',  notes);
+
+        addQueryString('pixi:drugTherapyData/drug', drug);
+        addQueryString('pixi:drugTherapyData/dose', dose);
+        addQueryString('pixi:drugTherapyData/doseUnit', doseUnit);
+        addQueryString('pixi:drugTherapyData/route', route);
+        addQueryString('pixi:drugTherapyData/site', site);
+        addQueryString('pixi:drugTherapyData/lotNumber', lotNumber);
+        addQueryString('pixi:drugTherapyData/technician', technician);
+        
+        addQueryString('pixi:drugTherapyData/weight', subjectWeight);
+        addQueryString('pixi:drugTherapyData/weightUnit', 'g');
+
+        experimentUrl = XNAT.url.addQueryString(experimentUrl, queryString);
+
+        let response = await fetch(experimentUrl, {method: 'PUT'});
+
+        if (!response.ok) {
+            throw new Error(`Error create/update of pixi:caliperMeasurementData ${experimentLabel} for subject ${subject}: ${response.statusText}`);
         }
 
         return response.text();
