@@ -54,7 +54,7 @@
 
     .hot-container {
         overflow: hidden;
-        margin: 2rem 10px;
+        margin: 1rem 15px;
         height: 330px;
     }
 

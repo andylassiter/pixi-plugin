@@ -17,7 +17,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
     }
 }(function () {
     
-    XNAT.plugin.pixi.drugTherapiesManager = class DrugTherapiesManager extends XNAT.plugin.pixi.abstractBulkEntryManager {
+    XNAT.plugin.pixi.drugTherapiesManager = class DrugTherapiesManager extends XNAT.plugin.pixi.abstractExperimentManager {
 
         constructor() {
             super("Drug Therapies",
@@ -25,48 +25,9 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 "After selecting a project, enter drug therapies applied to the selected subjects.");
         }
         
-        additionalComponents() {
-            const components = super.additionalComponents();
+        static async create(containerId, project = null, subjects = []) {
+            let drugTherapiesManager = new DrugTherapiesManager();
             
-            this.dateComponent = spawn('div.form-component.containerItem', [
-                spawn('label.required|for=\'date\'', 'Treatment Date'),
-                spawn('input.form-control|type=\'date\'', {
-                    id: 'date',
-                    name: 'date',
-                }),
-                spawn('div.date-error', {style: {display: 'none'}}, 'Please select a date')
-            ]);
-    
-            this.timeComponent = spawn('div.form-component.containerItem', [
-                spawn('label|for=\'time\'', 'Treatment Time'),
-                spawn('input.form-control|type=\'time\'|step=\'10\'', {
-                    id: 'time',
-                    name: 'time',
-                    style: { width : '110px' }
-                })
-            ]);
-    
-            this.technicianComponent = spawn('div.form-component.containerItem', [
-                spawn('label.required|for=\'technician\'', 'Technician'),
-                spawn('input.form-control|type=\'text\'', {
-                    id: 'technician',
-                    name: 'technician',
-                }),
-                spawn('div.technician-error', {style: {display: 'none'}}, 'Please enter a technician')
-            ]);
-            
-            components.push(
-                spawn('div.row', [
-                    this.dateComponent,
-                    this.timeComponent,
-                    this.technicianComponent
-                ])
-            )
-            
-            return components;
-        }
-    
-        async init(containerId, project = null, subjects = []) {
             let colHeaders = [
                 "Subject ID *",
                 "Experiment ID",
@@ -92,7 +53,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     source: [],
                     allowEmpty: true,
                     allowInvalid: true,
-                    validator: (value, callback) => this.validateSubjectId(value, callback)
+                    validator: (value, callback) => drugTherapiesManager.validateSubjectId(value, callback)
                 },
                 { data: 'experimentId' },
                 { data: 'experimentLabel' },
@@ -150,85 +111,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 }
             }
     
-            return super.init(containerId, hotSettings)
-                        .then(() => {
-                            this.setDateTime();
-                            this.setTechnician();
-                        })
-                        .then(() => {
-                            if (project !== null && project !== undefined && project !== '') {
-                                this.setProjectSelection(project)
-                                this.disableProjectSelection();
-                            }
-                        })
-                        .then(() => this.populateSubjectSelector())
-        }
-        
-        getDate() { return this.dateComponent.getElementsByTagName('input')[0].value }
-        
-        setDate(date = new Date()) {
-            const year = date.getFullYear(),
-                  month = String(date.getMonth() + 1).padStart(2, '0'),
-                  day = String(date.getDate()).padStart(2, '0')
-            
-            this.dateComponent.getElementsByTagName('input')[0].value =
-                `${year}-${month}-${day}`
-        }
-        
-        validateDate() {
-            if (this.getDate()) {
-                this.dateComponent.classList.remove('invalid');
-                this.dateComponent.querySelector('.date-error').style.display = 'none'
-                return true;
-            } else {
-                this.dateComponent.classList.add('invalid')
-                this.dateComponent.querySelector('.date-error').style.display = '';
-                return false;
-            }
-        }
-        
-        getTime() { return this.timeComponent.getElementsByTagName('input')[0].value }
-        
-        setTime(date = new Date()) {
-            const hours = String(date.getHours()).padStart(2, '0'),
-                  mins = String(date.getMinutes()).padStart(2, '0'),
-                  secs = String(date.getSeconds()).padStart(2, '0')
-            
-            this.timeComponent.getElementsByTagName('input')[0].value =
-                `${hours}:${mins}:${secs}`
-        }
-        
-        setDateTime(datetime = new Date()) {
-            this.setDate(datetime);
-            this.setTime(datetime);
-        }
-        
-        getTechnician() { return this.technicianComponent.getElementsByTagName('input')[0].value }
-        
-        setTechnician(technician = window.username) {
-            this.technicianComponent.getElementsByTagName('input')[0].value = technician;
-        }
-        
-        validateTechnician() {
-            if (this.getTechnician()) {
-                this.technicianComponent.classList.remove('invalid');
-                this.technicianComponent.querySelector('.technician-error').style.display = 'none'
-                return true;
-            } else {
-                this.technicianComponent.classList.add('invalid')
-                this.technicianComponent.querySelector('.technician-error').style.display = '';
-                return false;
-            }
-        }
-
-        validateSubjectId(subjectId, callback) {
-            let isEmpty = (item) => item === null || item === '';
-
-            if (isEmpty(subjectId)) {
-                callback(false);
-            } else {
-                callback(this.getColumn('subjectId').source.contains(subjectId));
-            }
+            return drugTherapiesManager.init(containerId, hotSettings, project, subjects).then(() => drugTherapiesManager);
         }
         
         async submit() {
@@ -380,6 +263,5 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             })
         }
     }
-
-
+    
 }));

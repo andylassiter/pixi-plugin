@@ -19,277 +19,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         return factory();
     }
 }(function () {
-
-    console.log('pixi-subjectEntryManager.js - SubjectEntryManager');
-
-    XNAT.plugin.pixi.abstractBulkEntryManager = class AbstractBulkEntryManager {
-        containerId;
-        container;
-
-        #title;
-        #subtitle;
-        #description;
-
-        projectSelectComponent;
-        submitButton;
-
-        messageComponent;
-
-        hot;
-        errorMessages;
-        successMessages;
-        lastKey;
-
-        constructor(heading, subheading, description) {
-            if (new.target === AbstractBulkEntryManager) {
-                throw new TypeError("Cannot construct Abstract instances directly");
-            }
-
-            this.#title = heading;
-            this.#subtitle = subheading;
-            this.#description = description;
-
-            this.errorMessages = new Map();
-            this.successMessages = new Map();
-        }
-
-        async submit() { throw new Error("Method 'submit()' must be implemented."); }
-
-        async init(containerId, hotSettings) {
-            const self = this;
-
-            this.containerId = containerId;
-            this.container = document.getElementById(this.containerId);
-
-            return this.render()
-                .then(() => {
-                    this.hot = new Handsontable(this.container.querySelector('.hot-table'), hotSettings);
-
-                    this.addKeyboardShortCuts();
-
-                    this.updateHeight();
-                    this.hot.addHook('afterCreateRow', (index, amount, source) => this.afterCreateRow(index, amount, source));
-                    this.hot.addHook('afterRemoveRow', (index, amount, physicalRows, source) => this.afterRemoveRow(index, amount, physicalRows, source));
-
-                    // Place cursor at first cell
-                    this.hot.selectCell(0, 0, 0, 0);
-                })
-        }
-
-        async render() {
-            const self = this;
-
-            this.projectSelectComponent = spawn('div.form-component.containerItem.third', [
-                spawn('label.required|for=\'project\'', 'Select a Project'),
-                spawn('select.form-control', {
-                        id: 'project',
-                        name: 'project',
-                        onchange: () => {
-                            self.validateProjectSelection();
-                            self.populateSubjectSelector().then(() => self.hot.validateCells());
-                        }
-                    },
-                    [spawn('option|', {selected: true, disabled: true, value: ''}, '')]),
-                spawn('div.prj-error', {style: {display: 'none'}}, 'Please select a project')
-            ])
-
-            this.messageComponent = spawn('div', {id: 'table-msg', style: {display: 'none'}});
-
-            let titleEl = spawn('h2', self.#title);
-
-            let panel = spawn('div.container', [
-                spawn('div.withColor containerTitle', self.#subtitle),
-                spawn('div.containerBody', [
-                    spawn('div.containerItem', self.#description),
-                    spawn('hr'),
-                    self.projectSelectComponent,
-                    ...self.additionalComponents(),
-                    spawn('div.hot-container.containerIterm', [spawn('div.hot-table')]),
-                    self.messageComponent
-                ])
-            ]);
-
-            this.submitButton = spawn('input.btn1.pull-right|type=button|value=Submit', {
-                onclick: () => {
-                    xmodal.confirm({
-                        title: "Confirm Submission",
-                        height: 220,
-                        scroll: false,
-                        content: `<p>Are you ready to submit?</p>`,
-                        okAction: () => self.submit(),
-                    })
-                }
-            });
-
-            let buttons = spawn('div.submit-right', [
-                self.submitButton,
-                ...self.additionalButtons(),
-                spawn('div.clear')
-            ])
-
-            this.container.innerHTML = '';
-            this.container.append(titleEl);
-            this.container.append(panel);
-            this.container.append(buttons);
-
-            return XNAT.plugin.pixi.projects.populateSelectBox('project');
-        }
-
-        additionalButtons() { return []; }
-        additionalComponents() { return []; }
-
-        addKeyboardShortCuts() {
-            const self = this;
-
-            // Add new keyboard shortcut for inserting a row
-            this.hot.updateSettings({
-                afterDocumentKeyDown: function (e) {
-                    if (self.lastKey === 'Control' && e.key === 'n') {
-                        let row = self.hot.getSelected()[0][0];
-                        self.hot.alter('insert_row_above', (row + 1), 1)
-                    }
-                    self.lastKey = e.key;
-                }
-            });
-        }
-
-        afterCreateRow(index, amount, source) { this.updateHeight(); }
-        afterRemoveRow(index, amount, physicalRows, source) { this.updateHeight(); }
-
-        removeKeyboardShortCuts() {
-            const self = this;
-
-            // Remove keyboard shortcut for inserting a row
-            this.hot.updateSettings({
-                afterDocumentKeyDown: function (e) {
-                    self.lastKey = e.key;
-                }
-            });
-        }
-
-        getProjectSelection() { return this.projectSelectComponent.getElementsByTagName('select')[0].value; }
-        disableProjectSelection() { this.projectSelectComponent.getElementsByTagName('select')[0].disabled = true; }
-
-        setProjectSelection(project) {
-            let options = this.projectSelectComponent.getElementsByTagName('option');
-
-            for (let i = 0; i < options.length; i++) {
-                let option = options[i];
-                if (option.value === project) {
-                    option.selected = true;
-                    break;
-                }
-            }
-        }
-
-        validateProjectSelection() {
-            if (this.getProjectSelection() === '') {
-                this.projectSelectComponent.classList.add('invalid')
-                this.projectSelectComponent.querySelector('.prj-error').style.display = '';
-                return false;
-            } else {
-                this.projectSelectComponent.classList.remove('invalid');
-                this.projectSelectComponent.querySelector('.prj-error').style.display = 'none'
-                return true;
-            }
-        }
-
-        async populateSubjectSelector() {
-            const self = this;
-
-            let project = self.getProjectSelection();
-
-            if (project === null || project === '') {
-                return;
-            }
-
-            return XNAT.plugin.pixi.subjects.getAll(project)
-                .then(resultSet => resultSet['ResultSet']['Result'])
-                .then(subjects => {
-                    let options = [];
-
-                    subjects.sort(pixi.compareGenerator('label'));
-                    subjects.forEach(subject => {
-                        options.push(subject['label'])
-                    });
-
-                    let subjectIdColumn = this.getColumn('subjectId');
-                    subjectIdColumn['source'] = options;
-                    this.updateColumns();
-                })
-        }
-
-        enableSubmitButton() { this.submitButton.disabled = false; }
-        disableSubmitButton() { this.submitButton.disabled = true; }
-
-        clearAndHideMessage() {
-            this.messageComponent.style.display = 'none';
-            this.messageComponent.innerHTML = '';
-            this.messageComponent.classList.remove('success');
-            this.messageComponent.classList.remove('error');
-            this.messageComponent.classList.remove('warning');
-            this.messageComponent.classList.remove('info');
-        }
-
-        displayMessage(type, message) {
-            this.messageComponent.style.display = '';
-            this.messageComponent.innerHTML = '';
-            this.messageComponent.classList.add(type);
-            this.messageComponent.append(message)
-        }
-
-        isEmpty() {
-            return (this.hot.countEmptyRows() === this.hot.countRows())
-        }
-
-        updateData(data) {
-            this.hot.updateData(data);
-        }
-
-        loadData(data) {
-            this.hot.loadData(data);
-        }
-
-        getColumns() {
-            let settings = this.hot.getSettings();
-            return settings['columns'];
-        }
-
-        getColumn(data) {
-            let columns = this.getColumns();
-            return columns.find(col => col['data'] === data);
-        }
-
-        updateColumns() {
-            this.hot.updateSettings({columns: this.getColumns()});
-        }
-
-        formatDate(inputDate) {
-            let date, month, year;
-
-            date = inputDate.getDate();
-            month = inputDate.getMonth() + 1;
-            year = inputDate.getFullYear();
-
-            date = date
-                .toString()
-                .padStart(2, '0');
-
-            month = month
-                .toString()
-                .padStart(2, '0');
-
-            return `${month}/${date}/${year}`;
-        }
-
-        updateHeight() {
-            let numRows = this.hot.countRows();
-            let height = 26 + 23 * (numRows + 2);
-            let container = this.container.querySelector('.hot-container');
-            container.style.height = `${height}px`;
-        }
-    }
-
+    
     class AbstractXenograftEntryManager extends XNAT.plugin.pixi.abstractBulkEntryManager {
 
         constructor(heading, subheading, description) {
@@ -316,7 +46,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 }
             }
 
-            return super.init(containerId, hotSettings, project, subjects)
+            return super.render(containerId, hotSettings)
                 .then(() => {
                     if (project !== null && project !== undefined && project !== '') {
                         this.setProjectSelection(project);
@@ -606,7 +336,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
 
         async init(containerId, project = null, subjects = []) {
-            return super.init(containerId, project, subjects)
+            return super.render(containerId, project, subjects)
                 .then(() => this.initCellLineSelector())
         }
 
@@ -656,7 +386,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
 
         async init(containerId, project = null, subjects = []) {
-            return super.init(containerId, project, subjects)
+            return super.render(containerId, project, subjects)
                 .then(() => this.initPdxSelector())
         }
 
@@ -796,7 +526,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
             }
 
-            return super.init(containerId, hotSettings, project, subjects)
+            return super.render(containerId, hotSettings, project, subjects)
                 .then(() => this.initSpeciesSelector())
                 .then(() => this.initVendorSelector())
                 .then(() => {

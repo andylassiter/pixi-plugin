@@ -6,8 +6,11 @@
 #parse("/screens/Pixi_Bulk_Entry_CSS.vm")
 
 <script type="text/javascript">
-    let drugTherapiesManager = new XNAT.plugin.pixi.drugTherapiesManager();
-    drugTherapiesManager.init("pixi-container", XNAT.data.context.projectID);
+    let drugTherapiesManager;
+
+    (async () => {
+        drugTherapiesManager = await XNAT.plugin.pixi.drugTherapiesManager.create("pixi-container", XNAT.data.context.projectID);
+    })();
 </script>
 
 <!-- END pixi-plugin templates/screens/PixiCaliperMeasurementWorkflow.vm -->

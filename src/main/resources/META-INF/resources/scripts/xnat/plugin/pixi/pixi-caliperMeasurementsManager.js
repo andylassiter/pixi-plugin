@@ -3,7 +3,7 @@
  *
  *  This script depends on functions in pixi-module.js
  */
-console.log('pixi-caliperMeasurementWorkflow.js');
+console.log('pixi-caliperMeasurementsManager.js');
 
 var XNAT = getObject(XNAT || {});
 XNAT.plugin = getObject(XNAT.plugin || {});
@@ -19,7 +19,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
     }
 }(function () {
 
-    XNAT.plugin.pixi.caliperMeasurementManager = class CaliperMeasurementManager extends XNAT.plugin.pixi.abstractBulkEntryManager {
+    XNAT.plugin.pixi.caliperMeasurementManager = class CaliperMeasurementManager extends XNAT.plugin.pixi.abstractExperimentManager {
 
         constructor() {
             super("Caliper Measurements",
@@ -27,21 +27,20 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 "After selecting a project, enter a caliper measurements for the selected subjects.");
         }
 
-        async init(containerId, project = null, subjects = []) {
+        static async create(containerId, project = null, subjects = []) {
+            let caliperMeasurementManager = new CaliperMeasurementManager();
+            
             let colHeaders = [
                 "Subject ID *",
                 "Experiment ID",
                 "Experiment Label",
-                "Date *",
-                "Time",
-                "Technician *",
                 "Length (mm) *",
                 "Width (mm) *",
                 "Subject Weight (g)",
                 "Notes"
             ]
 
-            let colWidths = [175, 100, 150, 100, 100, 100, 100, 100, 130, 175];
+            let colWidths = [175, 100, 150, 100, 100, 130, 200];
 
             let columns = [
                 {
@@ -52,30 +51,10 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     source: [],
                     allowEmpty: true,
                     allowInvalid: true,
-                    validator: (value, callback) => this.validateSubjectId(value, callback)
+                    validator: (value, callback) => caliperMeasurementManager.validateSubjectId(value, callback)
                 },
                 { data: 'experimentId' },
                 { data: 'experimentLabel' },
-                {
-                    data: 'measurementDate',
-                    type: 'date',
-                    allowEmpty: true,
-                    allowInvalid: true,
-                    dateFormat: 'MM/DD/YYYY',
-                    validator: (value, callback) => this.validateDate(value, callback)
-                },
-                {
-                    data: 'measurementTime',
-                    type: 'time',
-                    timeFormat: 'h:mm:ss a',
-                    correctFormat: true
-                },
-                {
-                    data: 'technician',
-                    type: 'text',
-                    allowEmpty: false,
-                    validator: (value, callback) => { value ? callback(true) : callback(false)}
-                },
                 {
                     data: 'tumorLength',
                     type: 'numeric',
@@ -110,68 +89,26 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 }
             }
 
-            return super.init(containerId, hotSettings)
-                .then(() => {
-                    if (project !== null && project !== undefined && project !== '') {
-                        this.setProjectSelection(project)
-                        this.disableProjectSelection();
-                    }
-                })
-                .then(() => this.populateSubjectSelector())
-                .then(() => this.hot.addHook('beforeChange', (changes, source) => this.beforeChange(changes, source)))
-        }
-
-        validateSubjectId(subjectId, callback) {
-            let isEmpty = (item) => item === null || item === '';
-
-            if (isEmpty(subjectId)) {
-                callback(false);
-            } else {
-                callback(this.getColumn('subjectId').source.contains(subjectId));
-            }
-        }
-
-        validateDate(injectionDate, callback) {
-            let isEmpty = (item) => item === null || item === '';
-
-            if (isEmpty(injectionDate)) {
-                callback(false);
-            } else {
-                let date = Date.parse(injectionDate);
-
-                if (isNaN(date)) {
-                    callback(false);
-                } else {
-                    callback(true);
-                }
-            }
-        }
-
-        beforeChange(changes, source) {
-            for (let i = changes.length - 1; i >= 0; i--) {
-                if (changes[i][1] === 'measurementDate') {
-                    if (changes[i][3] !== null || changes[i][3] !== '') {
-                        let date = Date.parse(changes[i][3]);
-                        if (isNaN(date)) {
-                            continue;
-                        }
-                        changes[i][3] = this.formatDate(new Date(date));
-                    }
-                }
-            }
+            return caliperMeasurementManager.init(containerId, hotSettings, project, subjects)
+                                            .then(() => caliperMeasurementManager);
         }
 
         async submit() {
             console.debug('Submitting')
-
-            if (!this.validateProjectSelection()) {
-                console.error('Invalid project selection.');
-                return;
-            }
-
-            if (this.isEmpty()) {
-                console.debug('Nothing to submit.');
-                return;
+    
+            let validProject = this.validateProjectSelection(),
+                validDate    = this.validateDate(),
+                validTech    = this.validateTechnician(),
+                isEmpty      = this.isEmpty();
+    
+            if (!validProject) {
+                return Promise.reject('Invalid project selection');
+            } else if (!validDate) {
+                return Promise.reject('Invalid date');
+            } else if (!validTech) {
+                return Promise.reject('Invalid technician');
+            } else if (isEmpty) {
+                return Promise.reject('Empty');
             }
 
             this.hot.validateCells(async (valid) => {
@@ -200,9 +137,9 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     let subject = this.hot.getDataAtRowProp(iRow, 'subjectId');
                     let experimentId = this.hot.getDataAtRowProp(iRow, 'experimentId');
                     let experimentLabel = this.hot.getDataAtRowProp(iRow, 'experimentLabel');
-                    let measurementDate = this.hot.getDataAtRowProp(iRow, 'measurementDate');
-                    let measurementTime = this.hot.getDataAtRowProp(iRow, 'measurementTime');
-                    let technician = this.hot.getDataAtRowProp(iRow, 'technician');
+                    let measurementDate = this.getDate();
+                    let measurementTime = this.getTime();
+                    let technician = this.getTechnician();
                     let tumorLength = this.hot.getDataAtRowProp(iRow, 'tumorLength');
                     let tumorWidth = this.hot.getDataAtRowProp(iRow, 'tumorWidth');
                     let subjectWeight = this.hot.getDataAtRowProp(iRow, 'subjectWeight');
