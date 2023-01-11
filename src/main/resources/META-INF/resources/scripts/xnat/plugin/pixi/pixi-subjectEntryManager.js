@@ -70,7 +70,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                                 'notes': ''
                             })
                         })
-
+                        
                         this.updateData(data);
                         this.hot.validateCells();
                         this.updateHeight();
@@ -336,7 +336,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
 
         async init(containerId, project = null, subjects = []) {
-            return super.render(containerId, project, subjects)
+            return super.init(containerId, project, subjects)
                 .then(() => this.initCellLineSelector())
         }
 
@@ -386,7 +386,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
 
         async init(containerId, project = null, subjects = []) {
-            return super.render(containerId, project, subjects)
+            return super.init(containerId, project, subjects)
                 .then(() => this.initPdxSelector())
         }
 
@@ -476,11 +476,11 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             // Columns
             let columns = [
                 {
-                    data: 'subjectId',
-                    validator: (value, callback) => this.validateSubjectId(value, callback),
+                    data: 'label',
+                    validator: (value, callback) => this.validateNewSubjectLabel(value, callback),
                     allowInvalid: true
                 },
-                {data: 'researchGroup'},
+                {data: 'group'},
                 {
                     data: 'species',
                     type: 'autocomplete',
@@ -512,8 +512,25 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 {data: 'geneticModifications'},
                 {data: 'geneticModificationsNonStd'}
             ]
-
+            
+            const initData = new Array(5).fill(undefined).map(u => ({
+                'id': '',
+                'label': '',
+                'project': '',
+                'group': '',
+                'sex': '',
+                'dob': '',
+                'litter': '',
+                'strain': '',
+                'vendor': '',
+                'stockNumber': '',
+                'humanizationType': '',
+                'geneticModifications': '',
+                'geneticModificationsNonStd': '',
+            }))
+            
             let hotSettings = {
+                data: initData,
                 colHeaders: colHeaders,
                 colWidths: colWidths,
                 columns: columns,
@@ -523,22 +540,27 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 width: '100%',
                 licenseKey: 'non-commercial-and-evaluation',
                 minRows: 1,
-
             }
-
+    
             return super.render(containerId, hotSettings, project, subjects)
-                .then(() => this.initSpeciesSelector())
-                .then(() => this.initVendorSelector())
-                .then(() => {
-                    if (project !== null && project !== undefined && project !== '') {
-                        this.setProjectSelection(project)
-                        this.disableProjectSelection();
-                    }
-                })
-                .then(() => this.hot.addHook('beforeChange', (changes, source) => this.beforeChange(changes, source)))
-                .then(() => this.hot.addHook('afterValidate', (isValid, value, row, prop)=> this.afterValidate(isValid, value, row, prop)));
+                        .then(() => this.initSpeciesSelector())
+                        .then(() => this.initVendorSelector())
+                        .then(() => {
+                            if (project !== null && project !== undefined && project !== '') {
+                                this.setProjectSelection(project)
+                                this.disableProjectSelection();
+                            }
+                        })
+                        .then(() => this.populateSubjectSelector())
+                        .then(() => this.hot.addHook('beforeChange',
+                                                     (changes, source) => this.beforeChange(changes, source)))
+                        .then(() => this.hot.addHook('afterValidate',
+                                                     (isValid, value, row, prop) => this.afterValidate(isValid,
+                                                                                                       value,
+                                                                                                       row,
+                                                                                                       prop)));
         }
-
+        
         additionalButtons() {
             const self = this;
 
@@ -556,7 +578,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                             content: `<p>Are you finished? Any unsubmitted data will be lost.</p>`,
                             okAction: () => {
                                 let project = self.getProjectSelection();
-                                let subjects = self.hot.getDataAtProp('subjectId').filter(s => s !== null && s !== '');
+                                let subjects = self.hot.getDataAtProp('label').filter(s => s !== null && s !== '');
                                 XNAT.plugin.pixi.pdxEntryManager.init(self.containerId, project, subjects);
                             },
                         })
@@ -573,7 +595,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                             content: `<p>Are you finished? Any unsubmitted data will be lost.</p>`,
                             okAction: () => {
                                 let project = self.getProjectSelection();
-                                let subjects = self.hot.getDataAtProp('subjectId').filter(s => s !== null && s !== '');
+                                let subjects = self.hot.getDataAtProp('label').filter(s => s !== null && s !== '');
                                 XNAT.plugin.pixi.cellLineEntryManager.init(self.containerId, project, subjects);
                             },
                         })
@@ -583,7 +605,148 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
             return buttons;
         }
-
+    
+        additionalComponents1() {
+            const components = super.additionalComponents1();
+        
+            components.push(
+                spawn('div.subjects-component.form-component.col.containerItem.third', {style: {display: 'none'}}, [
+                    spawn('label|for=\'subjects\'', 'Select Subjects'),
+                    spawn('select.form-control|', {
+                        id:       'subjects',
+                        name:     'subjects',
+                        multiple: true,
+                        onchange: async () => {
+                            let subjectsEl = document.getElementById('subjects');
+                            let selectedSubjects = Array.from(subjectsEl.selectedOptions).map(option => option.text);
+                        
+                            let data = JSON.parse(JSON.stringify(this.hot.getSourceData()));
+                        
+                            // Remove deselected subjects
+                            data = data.filter(row => selectedSubjects.contains(row['label']))
+                        
+                            // Add newly selected subjects
+                            let currentSubjects = data.map(row => row['label']);
+                        
+                            for (const subject of selectedSubjects) {
+                                if (!currentSubjects.contains(subject)) {
+                                    const subjectDetails = await XNAT.plugin.pixi.subjects.get(this.getProjectSelection(),
+                                                                                               subject);
+                                    data.push(subjectDetails);
+                                }
+                            }
+                        
+                            data = data.sort(XNAT.plugin.pixi.compareGenerator('label'));
+                        
+                            this.updateData(data);
+                            this.updateHeight();
+                        
+                            this.hot.validateCells();
+                        }
+                    }),
+                ])
+            );
+        
+            return components;
+        }
+        
+        async populateSubjectSelector() {
+            const self = this;
+        
+            let project = self.getProjectSelection();
+            
+            let subjectSelectEl = document.getElementById('subjects');
+            
+            while (subjectSelectEl.options.length > 0) {
+                subjectSelectEl.options.remove(subjectSelectEl.options.length - 1);
+            }
+            
+            if (project === null || project === undefined || project === '') {
+                return;
+            }
+        
+            return XNAT.plugin.pixi.subjects.getAll(project)
+                       .then(resultSet => resultSet['ResultSet']['Result'])
+                       .then(subjects => {
+                           let options = [];
+            
+                           subjects.sort(pixi.compareGenerator('label'));
+                           subjects.forEach(subject => {
+                               subjectSelectEl.options.add(new Option(subject['label'], subject['id']))
+                           });
+                       })
+        }
+    
+        actionComponents() {
+            const self = this;
+            
+            const components = super.actionComponents();
+            
+            components.push(
+                spawn('div.row', [
+                    spawn('div.form-component.containerItem.half.action.create.active', {onclick: () => this.toggleAction('create')}, [
+                        spawn('input.form-control.action.create|type=\'radio\'',
+                              {
+                                  id: 'createAction',
+                                  name: 'action',
+                                  checked: true,
+                              }),
+                        spawn('label|for=\'createAction\'', 'Create New Subjects'),
+                    ]),
+                    spawn('div.form-component.containerItem.half.action.update.disabled', {onclick: () => this.toggleAction('update')}, [
+                        spawn('input.form-control.action.update|type=\'radio\'',
+                              {
+                                  id: 'updateAction',
+                                  name: 'action'
+                              }),
+                        spawn('label|for=\'updateAction\'', 'Update Existing Subjects'),
+                    ])
+                ]),
+                spawn('hr'),
+            )
+            
+            // TODO make subject id column read only for editing
+            
+            return components;
+        }
+        
+        toggleAction(action) {
+            document.querySelectorAll(`.form-component.action input.action`).forEach(input => {
+                input.disabled = !input.classList.contains(action);
+                input.checked = input.classList.contains(action);
+            })
+    
+            document.querySelectorAll(`.form-component.action`).forEach(input => {
+                if (input.classList.contains(action)) {
+                    // Selected
+                    input.classList.add('active');
+                    input.classList.remove('disabled');
+                    input.disabled = false;
+                } else {
+                    input.classList.add('disabled');
+                    input.classList.remove('active');
+                    input.disabled = true;
+                }
+            })
+            
+            if (action === 'create') {
+                document.querySelector(`.subjects-component`).style.display = 'none';
+                const subjectLabelColumn = this.getColumn('label');
+                subjectLabelColumn.validator = (value, callback) => this.validateNewSubjectLabel(value, callback);
+                subjectLabelColumn['readOnly'] = false;
+                this.updateColumns();
+            } else if (action === 'update') {
+                document.querySelector(`.subjects-component`).style.display = '';
+                const subjectLabelColumn = this.getColumn('label');
+                subjectLabelColumn.validator = (value, callback) => this.validateExistingSubjectLabel(value, callback);
+                subjectLabelColumn['readOnly'] = true;
+                this.updateColumns();
+            }
+            
+            this.hot.validateCells();
+        }
+        
+    
         initSpeciesSelector() {
             XNAT.plugin.pixi.speices.get().then(species => {
                 let options = [];
@@ -612,25 +775,41 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             });
         }
 
-        validateSubjectId(subjectId, callback) {
+        validateNewSubjectLabel(value, callback) {
             let isEmpty = (item) => item === null || item === undefined || item === '';
 
-            if (isEmpty(subjectId)) {
+            if (isEmpty(value)) {
                 callback(false);
                 return;
             }
 
             setTimeout(() => {
                 let projectId = this.getProjectSelection();
-                XNAT.plugin.pixi.subjects.get(projectId, subjectId)
+                XNAT.plugin.pixi.subjects.get(projectId, value)
                     .then(() => callback(false))
                     .catch(() => callback(true));
+            }, 150);
+        }
+    
+        validateExistingSubjectLabel(value, callback) {
+            let isEmpty = (item) => item === null || item === undefined || item === '';
+        
+            if (isEmpty(value)) {
+                callback(false);
+                return;
+            }
+        
+            setTimeout(() => {
+                let projectId = this.getProjectSelection();
+                XNAT.plugin.pixi.subjects.get(projectId, value)
+                    .then(() => callback(true))
+                    .catch(() => callback(false));
             }, 150);
         }
 
         beforeChange(changes, source) {
             for (let i = changes.length - 1; i >= 0; i--) {
-                if (changes[i][1] === 'subjectId') {
+                if (changes[i][1] === 'label') {
                     if (changes[i][3] !== null && changes[i][3] !== undefined && changes[i][3] !== '') {
                         // Remove spaces and special characters from subject ids
                         changes[i][3] = changes[i][3].replaceAll(' ', '_');
@@ -639,7 +818,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                         // Append _1, _2, _3, ... to the subject ids to prevent entry of duplicate id's
                         let counter = 1;
                         if (changes[i][2] !== changes[i][3]) { // If the data changed
-                            while (this.hot.getDataAtProp('subjectId').contains(changes[i][3])) {
+                            while (this.hot.getDataAtProp('label').contains(changes[i][3])) {
                                 if (counter === 1) {
                                     changes[i][3] = `${changes[i][3]}_${counter}`;
                                 } else {
@@ -659,7 +838,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             if (!isValid) {
                 let displayRow = row + 1;
 
-                if (prop === "subjectId") {
+                if (prop === "label") {
                     if (value !== null && value !== undefined && value !== '') {
                         // Failed because it matches an existing subject
                         this.errorMessages.set(key, `${value} matches an existing subject id in 
@@ -720,9 +899,9 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 let failedRows = [];
 
                 for (let iRow = 0; iRow < this.hot.countRows(); iRow++) {
-                    let subjectLabel = this.hot.getDataAtRowProp(iRow, 'subjectId');
+                    let subjectLabel = this.hot.getDataAtRowProp(iRow, 'label');
 
-                    let researchGroup = this.hot.getDataAtRowProp(iRow, 'researchGroup');
+                    let group = this.hot.getDataAtRowProp(iRow, 'group');
                     let species = this.hot.getDataAtRowProp(iRow, 'species');
                     let sex = this.hot.getDataAtRowProp(iRow, 'sex');
                     let dob = this.hot.getDataAtRowProp(iRow, 'dob');
@@ -734,7 +913,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     let geneticModifications = this.hot.getDataAtRowProp(iRow, 'geneticModifications');
                     let geneticModificationsNonStd = this.hot.getDataAtRowProp(iRow, 'geneticModificationsNonStd');
 
-                    await XNAT.plugin.pixi.subjects.createOrUpdate(projectId, subjectLabel, researchGroup, species,
+                    await XNAT.plugin.pixi.subjects.createOrUpdate(projectId, subjectLabel, group, species,
                         sex, dob, litter, strain, source, stockNumber, humanizationType, geneticModifications,
                         geneticModificationsNonStd)
                         .then(url => {

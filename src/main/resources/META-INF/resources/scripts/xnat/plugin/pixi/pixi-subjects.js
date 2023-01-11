@@ -37,8 +37,36 @@ XNAT.plugin.pixi.subjects = getObject(XNAT.plugin.pixi.subjects || {});
         if (!response.ok) {
             throw new Error("Subject does not exist.");
         }
-
-        return response.json();
+        
+        let json = await response.json();
+        
+        let subject = {
+            'id': json['items'][0]['data_fields']['ID'],
+            'label': json['items'][0]['data_fields']['label'],
+            'project': json['items'][0]['data_fields']['project'],
+            'group': json['items'][0]['data_fields']['group'],
+        }
+        
+        let demographicsJson = json['items'][0]['children'].filter(child => child['field'] === 'demographics')
+        
+        if (demographicsJson.length === 1) {
+            // Has demographics
+            subject = {
+                ...subject,
+                'species': demographicsJson[0]['items'][0]['data_fields']['species'],
+                'sex': demographicsJson[0]['items'][0]['data_fields']['sex'],
+                'dob': demographicsJson[0]['items'][0]['data_fields']['dob'],
+                'litter': demographicsJson[0]['items'][0]['data_fields']['litter'],
+                'strain': demographicsJson[0]['items'][0]['data_fields']['strain'],
+                'vendor': demographicsJson[0]['items'][0]['data_fields']['vendor'],
+                'stockNumber': demographicsJson[0]['items'][0]['data_fields']['stockNumber'],
+                'humanizationType': demographicsJson[0]['items'][0]['data_fields']['humanizationType'],
+                'geneticModifications': demographicsJson[0]['items'][0]['data_fields']['geneticModifications'],
+                'geneticModificationsNonStd': demographicsJson[0]['items'][0]['data_fields']['geneticModificationsSecondary'],
+            }
+        }
+        
+        return subject;
     }
 
     XNAT.plugin.pixi.subjects.getAll = async function(projectId) {
@@ -59,7 +87,7 @@ XNAT.plugin.pixi.subjects = getObject(XNAT.plugin.pixi.subjects || {});
         return response.json();
     }
 
-    XNAT.plugin.pixi.subjects.createOrUpdate = async function(projectId, subjectLabel, researchGroup = null, species = null,
+    XNAT.plugin.pixi.subjects.createOrUpdate = async function(projectId, subjectLabel, group = null, species = null,
                                                               sex = null, dob = null, litter = null, strain = null,
                                                               source = null, stockNumber = null, humanizationType = null,
                                                               geneticModifications = null, geneticModificationsNonStd = null) {
@@ -76,7 +104,7 @@ XNAT.plugin.pixi.subjects = getObject(XNAT.plugin.pixi.subjects || {});
             }
         }
 
-        addQueryString('xnat:subjectData/group', researchGroup);
+        addQueryString('xnat:subjectData/group', group);
         addQueryString('xnat:subjectData/demographics[@xsi:type=pixi:animalDemographicData]/species', species);
         addQueryString('xnat:subjectData/demographics[@xsi:type=pixi:animalDemographicData]/sex', sex);
         addQueryString('xnat:subjectData/demographics[@xsi:type=pixi:animalDemographicData]/dateOfBirth', dob);
@@ -93,7 +121,7 @@ XNAT.plugin.pixi.subjects = getObject(XNAT.plugin.pixi.subjects || {});
         const response = await fetch(subjectUrl, {method: 'PUT'});
 
         if (!response.ok) {
-            throw new Error(`Error creating subject ${subjectLabel}: ${response.statusText}`);
+            throw new Error(`Unable to create/update subject ${subjectLabel} ${response.statusText}`);
         }
 
         return response.url;

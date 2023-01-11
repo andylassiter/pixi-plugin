@@ -59,7 +59,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             this.containerId = containerId;
             this.container = document.getElementById(this.containerId);
     
-            this.projectSelectComponent = spawn('div.form-component.containerItem.third', [
+            this.projectSelectComponent = spawn('div.form-component.col.containerItem.third', [
                 spawn('label.required|for=\'project\'', 'Select a Project'),
                 spawn('select.form-control', {
                           id: 'project',
@@ -82,7 +82,11 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 spawn('div.containerBody', [
                     spawn('div.containerItem', self.#description),
                     spawn('hr'),
-                    self.projectSelectComponent,
+                    ...self.actionComponents(),
+                    spawn('div.row', [
+                        self.projectSelectComponent,
+                        ...self.additionalComponents1(),
+                    ]),
                     ...self.additionalComponents(),
                     spawn('div.hot-container.containerIterm', [spawn('div.hot-table')]),
                     self.messageComponent
@@ -119,8 +123,6 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                            this.addKeyboardShortCuts();
                 
                            this.updateHeight();
-                           this.hot.addHook('afterCreateRow', (index, amount, source) => this.afterCreateRow(index, amount, source));
-                           this.hot.addHook('afterRemoveRow', (index, amount, physicalRows, source) => this.afterRemoveRow(index, amount, physicalRows, source));
                 
                            // Place cursor at first cell
                            this.hot.selectCell(0, 0, 0, 0);
@@ -129,6 +131,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         
         additionalButtons() { return []; }
         additionalComponents() { return []; }
+        additionalComponents1() { return []; }
+        actionComponents() { return []; }
         
         addKeyboardShortCuts() {
             const self = this;
@@ -144,9 +148,6 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                                         }
                                     });
         }
-        
-        afterCreateRow(index, amount, source) { this.updateHeight(); }
-        afterRemoveRow(index, amount, physicalRows, source) { this.updateHeight(); }
         
         removeKeyboardShortCuts() {
             const self = this;
@@ -191,7 +192,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             
             let project = self.getProjectSelection();
             
-            if (project === null || project === '') {
+            if (project === null || project === undefined || project === '') {
                 return;
             }
             
@@ -238,10 +239,6 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             this.hot.updateData(data);
         }
         
-        loadData(data) {
-            this.hot.loadData(data);
-        }
-        
         getColumns() {
             let settings = this.hot.getSettings();
             return settings['columns'];
@@ -279,6 +276,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             let height = 26 + 23 * (numRows + 2);
             let container = this.container.querySelector('.hot-container');
             container.style.height = `${height}px`;
+    
+            this.hot.render();
         }
     }
     
@@ -307,7 +306,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         additionalComponents() {
             const components = super.additionalComponents();
         
-            this.dateComponent = spawn('div.form-component.containerItem', [
+            this.dateComponent = spawn('div.form-component.col.containerItem', [
                 spawn('label.required|for=\'date\'', 'Date'),
                 spawn('input.form-control|type=\'date\'', {
                     id: 'date',
@@ -316,7 +315,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 spawn('div.date-error', {style: {display: 'none'}}, 'Please select a date')
             ]);
         
-            this.timeComponent = spawn('div.form-component.containerItem', [
+            this.timeComponent = spawn('div.form-component.col.containerItem', [
                 spawn('label|for=\'time\'', 'Time'),
                 spawn('input.form-control|type=\'time\'|step=\'10\'', {
                     id: 'time',
@@ -325,7 +324,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 })
             ]);
         
-            this.technicianComponent = spawn('div.form-component.containerItem', [
+            this.technicianComponent = spawn('div.form-component.col.containerItem', [
                 spawn('label.required|for=\'technician\'', 'Technician'),
                 spawn('input.form-control|type=\'text\'', {
                     id: 'technician',

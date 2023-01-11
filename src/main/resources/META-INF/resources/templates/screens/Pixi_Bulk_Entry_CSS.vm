@@ -4,17 +4,26 @@
         display: flex;
         flex-direction: row;
         align-items: baseline;
+        col-gap: 0.4rem;
+    }
+
+    div.col {
+        display: flex;
+        flex-direction: column;
+        align-items: baseline;
+        row-gap: 0.4rem;
     }
 
     div.third {
         width: 33%;
     }
 
+    div.half {
+        width: 50%;
+    }
+
     div.form-component {
         display: flex;
-        flex-direction: column;
-        align-items: baseline;
-        row-gap: 0.4rem;
 
         border: 1px #ccc solid;
         border-radius: 3px;
@@ -23,6 +32,24 @@
 
         color: #444;
         padding: 10px 15px 10px 10px;
+    }
+
+    div.form-component.active {
+        background-color: #e4efff;
+        border-color: #c4cfdf;
+    }
+
+    div.form-component.disabled {
+        background-color: #fff;
+        border-color: #ccc;
+    }
+
+    div.form-component.disabled:hover {
+        cursor: pointer;
+    }
+
+    div.form-component.disabled:hover * {
+        cursor: pointer;
     }
 
     div.containerBody > div > div.form-component {
@@ -52,6 +79,12 @@
         box-sizing: border-box;
     }
 
+    /* Reset app.css*/
+    div.form-component select[multiple] {
+        max-width: 100%;
+        height: 125px;
+    }
+
     .hot-container {
         overflow: hidden;
         margin: 1rem 15px;
@@ -73,6 +106,10 @@
 
     .submit-right > input {
         margin: 0 0 0 15px;
+    }
+
+    div.form-component input[type="radio"] {
+        margin: 3px 5px 3px 5px;
     }
 
     .handsontable td.htInvalid {

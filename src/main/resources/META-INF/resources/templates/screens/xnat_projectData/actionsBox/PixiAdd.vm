@@ -22,13 +22,13 @@
                     <a class="yuimenuitemlabel" href="$link.setPage("NewSubjects.vm").addPathInfo('project',$project.getId())">Subject Manager</a>
                 </li>
                 <li class="yuimenuitem">
-                    <a class="yuimenuitemlabel" href="$link.setPage("XDATScreen_edit_pixi_hotelScanRecord.vm").addPathInfo('project',$project.getId())">Record New Hotel Scan</a>
-                </li>
-                <li class="yuimenuitem">
                     <a class="yuimenuitemlabel" href="$link.setPage("PixiCaliperMeasurementWorkflow.vm").addPathInfo('project',$project.getId())">Caliper Measurements Manager</a>
                 </li>
                 <li class="yuimenuitem">
                     <a class="yuimenuitemlabel" href="$link.setPage("Pixi_Drug_Therapies.vm").addPathInfo('project',$project.getId())">Drug Therapy Manager</a>
+                </li>
+                <li class="yuimenuitem">
+                    <a class="yuimenuitemlabel" href="$link.setPage("XDATScreen_edit_pixi_hotelScanRecord.vm").addPathInfo('project',$project.getId())">Record New Hotel Scan</a>
                 </li>
             </ul>
         </div>
