@@ -7,6 +7,7 @@
 console.debug('pixi-experiments.js');
 
 var XNAT = getObject(XNAT || {});
+XNAT.validate = getObject(XNAT.validate || {});
 XNAT.plugin = getObject(XNAT.plugin || {});
 XNAT.plugin.pixi = getObject(XNAT.plugin.pixi || {});
 XNAT.plugin.pixi.experiments = getObject(XNAT.plugin.pixi.experiments || {});
@@ -26,6 +27,9 @@ XNAT.plugin.pixi.experiments.drugTherapy = getObject(XNAT.plugin.pixi.experiment
         return factory();
     }
 }(function() {
+    
+    XNAT.validate.isEmpty = (value) => value === null || value === undefined || value === '';
+    XNAT.validate.notEmpty = (value) => !XNAT.validate.isEmpty(value);
 
     XNAT.plugin.pixi.experiments.cellLine.createOrUpdate = async function(projectId, subjectLabel, experimentId,
                                                                           experimentLabel, cellLine, injectionDate,
@@ -81,6 +85,52 @@ XNAT.plugin.pixi.experiments.drugTherapy = getObject(XNAT.plugin.pixi.experiment
         }
 
         return response.text();
+    }
+    
+    XNAT.plugin.pixi.experiments.get = async function(project, subject, experiment, xsiType) {
+        console.debug(`pixi-experiments.js: XNAT.plugin.pixi.experiments.pdx.get`);
+        
+        let url = '/data'
+        
+        if (project) {
+            url = url + `/projects/${project}`
+        }
+    
+        if (subject) {
+            url = url + `/subjects/${subject}`
+        }
+    
+        if (experiment) {
+            url = url + `/experiments/${experiment}`
+        } else {
+            url = url + `/experiments`
+        }
+        
+        if (xsiType) {
+            url = url + `?xsiType=${xsiType}`;
+            url = url + `&format=json`
+        } else {
+            url = url + `?format=json`
+        }
+        
+        let response = await fetch(url, {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json'},
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error fetching experiments for project: '${project}' subject: '${subject}' experiment: '${experiment}' xsiType: '${xsiType}'`);
+        }
+        
+        return response.json();
+    }
+    
+    XNAT.plugin.pixi.experiments.pdx.get = async function(project, subject, experiment) {
+        return XNAT.plugin.pixi.experiments.get(project, subject, experiment, 'pixi:pdxData');
+    }
+    
+    XNAT.plugin.pixi.experiments.pdx.cellLine = async function(project, subject, experiment) {
+        return XNAT.plugin.pixi.experiments.get(project, subject, experiment, 'pixi:pdxData');
     }
 
     XNAT.plugin.pixi.experiments.pdx.createOrUpdate = async function(projectId, subjectLabel, experimentId,

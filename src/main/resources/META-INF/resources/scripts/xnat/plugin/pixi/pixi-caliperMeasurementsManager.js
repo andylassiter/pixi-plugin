@@ -23,8 +23,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
         constructor() {
             super("Caliper Measurements",
-                "Enter caliper measurements",
-                "After selecting a project, enter a caliper measurements for the selected subjects.");
+                  "Enter caliper measurements",
+                  "After selecting a project, enter a caliper measurements for the selected subjects.");
         }
 
         static async create(containerId, project = null, subjects = []) {
@@ -92,149 +92,45 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             return caliperMeasurementManager.init(containerId, hotSettings, project, subjects)
                                             .then(() => caliperMeasurementManager);
         }
-
-        async submit() {
-            console.debug('Submitting')
+        
+        getXsiType() { return 'pixi:caliperMeasurementData' }
     
-            let validProject = this.validateProjectSelection(),
-                validDate    = this.validateDate(),
-                validTech    = this.validateTechnician(),
-                isEmpty      = this.isEmpty();
-    
-            if (!validProject) {
-                return Promise.reject('Invalid project selection');
-            } else if (!validDate) {
-                return Promise.reject('Invalid date');
-            } else if (!validTech) {
-                return Promise.reject('Invalid technician');
-            } else if (isEmpty) {
-                return Promise.reject('Empty');
-            }
-
-            this.hot.validateCells(async (valid) => {
-                if (!valid) {
-                    let message = spawn('div', [
-                        spawn('p', 'Invalid inputs. Please correct before resubmitting.'),
-                    ])
-
-                    this.displayMessage('error', message);
-
-                    return;
-                }
-
-                // Everything is valid, remove old messages
-                this.clearAndHideMessage();
-
-                XNAT.ui.dialog.static.wait('Submitting to XNAT', {id: "submit_injection"});
-
-                let projectId = this.getProjectSelection();
-                let experiments = [];
-                let successfulRows = [];
-                let failedRows = [];
-
-                for (let iRow = 0; iRow < this.hot.countRows(); iRow++) {
-
-                    let subject = this.hot.getDataAtRowProp(iRow, 'subjectId');
-                    let experimentId = this.hot.getDataAtRowProp(iRow, 'experimentId');
-                    let experimentLabel = this.hot.getDataAtRowProp(iRow, 'experimentLabel');
-                    let measurementDate = this.getDate();
-                    let measurementTime = this.getTime();
-                    let technician = this.getTechnician();
-                    let tumorLength = this.hot.getDataAtRowProp(iRow, 'tumorLength');
-                    let tumorWidth = this.hot.getDataAtRowProp(iRow, 'tumorWidth');
-                    let subjectWeight = this.hot.getDataAtRowProp(iRow, 'subjectWeight');
-                    let notes = this.hot.getDataAtRowProp(iRow, 'notes');
-
-                    await XNAT.plugin.pixi.experiments.caliperMeasurement.createOrUpdate(
-                        projectId, subject, experimentId, experimentLabel, measurementDate, measurementTime, technician,
-                        tumorLength, tumorWidth, subjectWeight, notes).then(id => {
-
-                        successfulRows.push(iRow)
-                        experiments.push({
-                            'subjectId': subject,
-                            'experimentId': id,
-                            'row': iRow,
-                            'url': `/data/projects/${projectId}/experiments/${id}?format=html`
-                        });
-
-                        return id;
-                    } ).catch(error => {
-                        failedRows.push(
-                            {
-                                'subjectId': subject,
-                                'row': iRow,
-                                'error': error
-                            }
-                        )
-
-                        return error;
-                    });
-                }
-
-                XNAT.ui.dialog.close('submit_experiment');
-
-                // Disable new inputs to successful rows
-                this.hot.updateSettings({
-                    cells: function (row, col) {
-                        var cellProperties = {};
-
-                        if (successfulRows.contains(row)) {
-                            cellProperties.readOnly = true;
-                        }
-
-                        return cellProperties;
-                    },
-                    contextMenu: ['copy', 'cut'],
-                });
-
-                this.removeKeyboardShortCuts();
-                this.disableProjectSelection();
-
-                experiments.forEach(experiment => {
-                    this.hot.setDataAtRowProp(experiment['row'], 'experimentId', experiment['experimentId']);
-                })
-
-                if (failedRows.length === 0) {
-                    // Success
-                    let message = spawn('div', [
-                        spawn('p', 'Successful submissions:'),
-                        spawn('ul', experiments.map(experiment => spawn('li', [spawn(`a`, {
-                            href: experiment['url'],
-                            target: '_BLANK'
-                        }, experiment['subjectId'])])))
-                    ])
-
-                    this.displayMessage('success', message);
-
-                    // Disable resubmissions
-                    this.disableSubmitButton();
-                } else if (successfulRows.length === 0 && failedRows.length > 0) {
-                    // All submissions in error
-                    let message = spawn('div', [
-                        spawn('p', ''),
-                        spawn('p', 'There were errors with your submission. Correct the issues and try resubmitting.'),
-                        spawn('ul', failedRows.map(experiments => spawn('li', `Row: ${experiments['row'] + 1} ${XNAT.app.displayNames.singular.subject} ID: ${experiments['subjectId']} ${experiments['error']}`))),
-                    ])
-
-                    this.displayMessage('error', message);
-                } else if (successfulRows.length > 0 && failedRows.length > 0) {
-                    // Some submitted successfully, some failed
-                    let message = spawn('div', [
-                        spawn('p', 'There were errors with your submission. Correct the issues and try resubmitting.'),
-                        spawn('p', 'Error(s):'),
-                        spawn('ul', failedRows.map(experiments => spawn('li', `Row: ${experiments['row'] + 1} ${XNAT.app.displayNames.singular.subject} ID: ${experiments['subjectId']} ${experiments['error']}`))),
-                        spawn('p', 'Successful submissions:'),
-                        spawn('ul', experiments.map(experiment => spawn('li', [spawn(`a`, {
-                            href: experiment['url'],
-                            target: '_BLANK'
-                        }, experiment['subjectId'])])))
-                    ])
-
-                    this.displayMessage('warning', message);
-                }
-
-                XNAT.ui.dialog.close('submit_experiment');
-            })
+        async submitRow(row) {
+            console.debug(`Submitting caliper measurements for row ${row}`);
+            
+            let project = this.getProjectSelection();
+            let subject = this.hot.getDataAtRowProp(row, 'subjectId');
+            let experimentId = this.hot.getDataAtRowProp(row, 'experimentId');
+            let experimentLabel = this.hot.getDataAtRowProp(row, 'experimentLabel');
+            let measurementDate = this.getDate();
+            let measurementTime = this.getTime();
+            let technician = this.getTechnician();
+            let tumorLength = this.hot.getDataAtRowProp(row, 'tumorLength');
+            let tumorWidth = this.hot.getDataAtRowProp(row, 'tumorWidth');
+            let subjectWeight = this.hot.getDataAtRowProp(row, 'subjectWeight');
+            let notes = this.hot.getDataAtRowProp(row, 'notes');
+        
+            return XNAT.plugin.pixi.experiments.caliperMeasurement.createOrUpdate(project, subject, experimentId,
+                                                                                  experimentLabel, measurementDate,
+                                                                                  measurementTime, technician,
+                                                                                  tumorLength, tumorWidth,
+                                                                                  subjectWeight, notes)
+                       .then(id => {
+                           return {
+                               'subject':      subject,
+                               'experimentId': id,
+                               'row':          row,
+                               'url':          `/data/projects/${project}/experiments/${id}?format=html`,
+                               'urlText':      `${subject}`,
+                           }
+                       })
+                       .catch(error => {
+                           return {
+                               'subject': subject,
+                               'row':     row,
+                               'error':   error,
+                           }
+                       })
         }
     }
 

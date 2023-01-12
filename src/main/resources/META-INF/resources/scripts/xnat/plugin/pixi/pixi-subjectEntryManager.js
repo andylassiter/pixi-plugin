@@ -20,65 +20,272 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
     }
 }(function () {
     
+    let validationMixins = {
+        isEmpty(item) {
+            return item === null || item === undefined || item === '';
+        },
+        validateSubjectLabel(project, subject, method ,callback) {
+            if (validationMixins.isEmpty(subject)) {
+                callback(false);
+                return;
+            }
+            
+            let thenCb, catchCb;
+            
+            switch(method) {
+                case 'create':
+                case 'new':
+                    thenCb = false;
+                    catchCb = true;
+                    break;
+                case 'update':
+                case 'existing':
+                    thenCb = true;
+                    catchCb = false;
+                    break;
+            }
+    
+            setTimeout(() => {
+                XNAT.plugin.pixi.subjects.get(project, subject)
+                    .then(() => callback(thenCb))
+                    .catch(() => callback(catchCb));
+            }, 150);
+        },
+        validateNewSubjectLabel(project, subject, callback) {
+            validationMixins.validateSubjectLabel(project, subject, 'new', callback);
+        },
+        validateExistingSubjectLabel(project, subject, callback) {
+            validationMixins.validateSubjectLabel(project, subject, 'update', callback);
+        }
+    };
+    
+    let actionMixins = {
+        async populateMultiSubjectSelector(element, project) {
+            while (element.options.length > 0) {
+                element.options.remove(element.options.length - 1);
+            }
+        
+            if (this.isEmpty(project)) {
+                return;
+            }
+        
+            return XNAT.plugin.pixi.subjects.getAll(project)
+                       .then(resultSet => resultSet['ResultSet']['Result'])
+                       .then(subjects => {
+                           let options = [];
+            
+                           subjects.sort(pixi.compareGenerator('label'));
+                           subjects.forEach(subject => {
+                               element.options.add(new Option(subject['label'], subject['id']))
+                           });
+                       })
+        },
+        disableMultiSubjectSelector(element) {
+            element.disabled = true;
+        }
+    }
+    
     class AbstractXenograftEntryManager extends XNAT.plugin.pixi.abstractBulkEntryManager {
 
         constructor(heading, subheading, description) {
             super(heading, subheading, description);
+            Object.assign(this, validationMixins);
+            Object.assign(this, actionMixins);
         }
 
         async submitRow(row) { throw new Error("Method 'submitRow()' must be implemented."); }
-
-        async init(containerId, project = null, subjects = []) {
-           let hotSettings = {
-                colHeaders: this.initialColumnHeaders(),
-                colWidths: this.initialColumnWidths(),
-                columns: this.initialColumns(),
-                rowHeaders: true,
+    
+        async init(containerId, hotSettings = null, project = null, subjects = []) {
+            let initData = [];
+            
+            if (subjects.length > 0) {
+                subjects.forEach(subject => {
+                    initData.push({
+                                  'subjectId':        subject,
+                                  'experimentId':     '',
+                                  'sourceId':         '',
+                                  'injectionDate':    '',
+                                  'injectionSite':    '',
+                                  'injectionType':    '',
+                                  'numCellsInjected': '',
+                                  'notes':            ''
+                              })
+                })
+            } else {
+                initData = new Array(5).fill(undefined).map(u => ({
+                    'subjectId':        '',
+                    'experimentId':     '',
+                    'sourceId':         '',
+                    'injectionDate':    '',
+                    'injectionSite':    '',
+                    'injectionType':    '',
+                    'numCellsInjected': '',
+                    'notes':            ''
+                }))
+            }
+            
+            hotSettings = {
+                data:               initData,
+                colHeaders:         this.initialColumnHeaders(),
+                colWidths:          this.initialColumnWidths(),
+                columns:            this.initialColumns(),
+                rowHeaders:         true,
                 manualColumnResize: true,
-                contextMenu: ['row_above', 'row_below', '---------', 'remove_row', '---------', 'undo', 'redo', '---------', 'copy', 'cut'],
-                width: '100%',
-                licenseKey: 'non-commercial-and-evaluation',
-                minRows: 1,
-                hiddenColumns: {
+                contextMenu:        ['row_above', 'row_below', '---------', 'remove_row', '---------', 'undo', 'redo', '---------', 'copy', 'cut'],
+                width:              '100%',
+                licenseKey:         'non-commercial-and-evaluation',
+                minRows:            1,
+                hiddenColumns:      {
                     columns: [1],
                     // show UI indicators to mark hidden columns
                     indicators: false
                 }
             }
-
-            return super.render(containerId, hotSettings)
-                .then(() => {
-                    if (project !== null && project !== undefined && project !== '') {
-                        this.setProjectSelection(project);
-                        this.disableProjectSelection();
-                    }
-                })
-                .then(() => this.populateSubjectSelector())
-                .then(() => {
-                    if (subjects.length > 0) {
-                        let data = [];
-
-                        subjects.forEach(subject => {
-                            data.push({
-                                'subjectId': subject,
-                                'experimentId': '',
-                                'sourceId': '',
-                                'injectionDate': '',
-                                'injectionSite': '',
-                                'injectionType': '',
-                                'numCellsInjected': '',
-                                'notes': ''
-                            })
-                        })
-                        
-                        this.updateData(data);
-                        this.hot.validateCells();
-                        this.updateHeight();
-                    }
-                })
-                .then(() => this.hot.addHook('beforeChange', (changes, source) => this.beforeChange(changes, source)));
+        
+            return super.init(containerId, hotSettings, project, subjects)
+                        .then(() => this.hot.addHook('beforeChange',
+                                                     (changes, source) => this.beforeChange(changes, source)))
+                        .then(() => {
+                            const subjectsSelectElement = document.getElementById('subjects');
+                            const project = this.getProjectSelection();
+                            this.populateMultiSubjectSelector(subjectsSelectElement, project);
+                            
+                            document.addEventListener('project-changed', () => this.populateMultiSubjectSelector(subjectsSelectElement, project));
+                            document.addEventListener('submit', () => this.disableMultiSubjectSelector(subjectsSelectElement));
+                        });
         }
+        
+        getXsiType() { return '' }
+        
+        containerBody() {
+            let containerBody = super.containerBody();
+    
+            containerBody = [
+                spawn('div.row', [
+                    spawn('div.form-component.containerItem.half.action.create.active',
+                          {onclick: () => this.toggleAction('create')}, // TODO clear experiment id??
+                          [
+                              spawn('input.form-control.action.create|type=\'radio\'',
+                                    {
+                                        id:      'createAction',
+                                        name:    'action',
+                                        checked: true,
+                                    }),
+                              spawn('label|for=\'createAction\'', 'New'),
+                          ]),
+                    spawn('div.form-component.containerItem.half.action.update.disabled',
+                          {onclick: () => this.toggleAction('update')},
+                          [
+                              spawn('input.form-control.action.update|type=\'radio\'',
+                                    {
+                                        id:   'updateAction',
+                                        name: 'action'
+                                    }),
+                              spawn('label|for=\'updateAction\'', 'Update'),
+                          ])
+                ]),
+                spawn('hr'),
+                spawn('div.row', [
+                    containerBody[0],
+                    spawn('div.subjects-component.form-component.col.containerItem.third', {style: {display: 'none'}}, [
+                        spawn('label|for=\'subjects\'', 'Select Subjects'),
+                        spawn('select.form-control|', {
+                            id:       'subjects',
+                            name:     'subjects',
+                            multiple: true,
+                            onchange: async () => {
+                                let subjectsEl = document.getElementById('subjects');
+                                let selectedSubjects = Array.from(subjectsEl.selectedOptions).map(option => option.text);
 
+                                let hotData = JSON.parse(JSON.stringify(this.hot.getSourceData()));
+
+                                // Remove deselected subjects
+                                hotData = hotData.filter(row => selectedSubjects.contains(row['subjectId']))
+
+                                // Add newly selected subjects
+                                let currentSubjects = hotData.map(row => row['subjectId']);
+
+                                for (const subject of selectedSubjects) {
+                                    if (!currentSubjects.contains(subject)) {
+                                        const response = await XNAT.plugin.pixi.experiments.get(this.getProjectSelection(), subject, '', this.getXsiType());
+                                        
+                                        // Skip subjects without experiments
+                                        if (response['ResultSet']['Result'].length === 0) {
+                                            continue;
+                                        }
+                                        
+                                        // Add each experiment to hot
+                                        for (const result of response['ResultSet']['Result']) {
+                                            const response = await XNAT.plugin.pixi.experiments.get('', '', result['ID'], '');
+                                            let data_fields = response['items'][0]['data_fields']
+                                            
+                                            let experiment = {
+                                                'subjectId':        subject,
+                                                'experimentId':     result['ID'],
+                                                'sourceId':         data_fields['sourceId'],
+                                                'injectionDate':    data_fields['date'],
+                                                'injectionSite':    data_fields['injectionSite'],
+                                                'injectionType':    data_fields['injectionType'],
+                                                'numCellsInjected': data_fields['numCellsInjected'],
+                                                'notes':            data_fields['note']
+                                            }
+                                            
+                                            hotData.push(experiment);
+                                        }
+                                    }
+                                }
+
+                                hotData = hotData.sort(XNAT.plugin.pixi.compareGenerator('subjectId'));
+
+                                this.updateData(hotData);
+                                this.updateHeight();
+
+                                this.hot.validateCells();
+                            }
+                        }),
+                    ])
+                ])
+            ]
+            
+            return containerBody;
+        }
+        
+        toggleAction(action) {
+            document.querySelectorAll(`.form-component.action input.action`).forEach(input => {
+                input.disabled = !input.classList.contains(action);
+                input.checked = input.classList.contains(action);
+            })
+    
+            document.querySelectorAll(`.form-component.action`).forEach(input => {
+                if (input.classList.contains(action)) {
+                    // Selected
+                    input.classList.add('active');
+                    input.classList.remove('disabled');
+                    input.disabled = false;
+                } else {
+                    input.classList.add('disabled');
+                    input.classList.remove('active');
+                    input.disabled = true;
+                }
+            })
+    
+            if (action === 'create') {
+                document.querySelector(`.subjects-component`).style.display = 'none';
+                const subjectLabelColumn = this.getColumn('subjectId');
+                subjectLabelColumn.validator = (value, callback) => this.validateNewSubjectLabel(this.getProjectSelection(), value, callback);
+                subjectLabelColumn['readOnly'] = false;
+                this.updateColumns();
+            } else if (action === 'update') {
+                document.querySelector(`.subjects-component`).style.display = '';
+                const subjectLabelColumn = this.getColumn('subjectId');
+                subjectLabelColumn.validator = (value, callback) => this.validateExistingSubjectLabel(this.getProjectSelection(), value, callback);
+                subjectLabelColumn['readOnly'] = true;
+                this.updateColumns();
+            }
+    
+            this.hot.validateCells();
+        }
+    
         validateSubjectId(subjectId, callback) {
             let isEmpty = (item) => item === null || item === '';
 
@@ -205,7 +412,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 return;
             }
 
-            if (this.isEmpty()) {
+            if (this.isHotEmpty()) {
                 console.debug('Nothing to submit.');
                 return;
             }
@@ -224,7 +431,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 // Everything is valid, remove old messages
                 this.clearAndHideMessage();
 
-                XNAT.ui.dialog.static.wait('Submitting to XNAT', {id: "submit_injection"});
+                XNAT.ui.dialog.static.wait('Submitting to XNAT', {id: "submit"});
 
                 let projectId = this.getProjectSelection();
                 let experiments = [];
@@ -260,7 +467,9 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                         });
                 }
 
-                XNAT.ui.dialog.close('submit_injection');
+                XNAT.ui.dialog.close('submit');
+    
+                document.dispatchEvent(new Event('submit'));
 
                 // Disable new inputs to successful rows
                 this.hot.updateSettings({
@@ -330,14 +539,18 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
     class CellLineEntryManager extends AbstractXenograftEntryManager {
 
         constructor() {
-            super("Cell Line Details",
+            super("Cell Line Data Manager",
                 "Enter cell line injection details",
                 "After selecting a project, define the details of each cell line injection in the table below. A subject id, cell line, and injection date are required for each entry.");
         }
 
-        async init(containerId, project = null, subjects = []) {
-            return super.init(containerId, project, subjects)
-                .then(() => this.initCellLineSelector())
+        async init(containerId, hotSettings = null, project = null, subjects = []) {
+            return super.init(containerId, hotSettings, project, subjects)
+                        .then(() => this.initCellLineSelector())
+        }
+    
+        getXsiType() {
+            return 'pixi:cellLineData';
         }
 
         initialColumnHeaders() {
@@ -378,18 +591,22 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
     }
 
     class PdxEntryManager extends AbstractXenograftEntryManager {
-
+        
         constructor() {
-            super("PDX Details",
+            super("PDX Data Manager Details",
                 "Enter injection details",
                 "After selecting a project, define the details of each injection in the table below. A subject id, PDX, and injection date are required for each entry.");
         }
 
-        async init(containerId, project = null, subjects = []) {
-            return super.init(containerId, project, subjects)
+        async init(containerId, hotSettings = null, project = null, subjects = []) {
+            return super.init(containerId, hotSettings = null, project, subjects)
                 .then(() => this.initPdxSelector())
         }
-
+        
+        getXsiType() {
+            return 'pixi:pdxData';
+        }
+    
         initialColumnHeaders() {
             let columnHeaders = super.initialColumnHeaders();
             columnHeaders[2] = 'PDX *';
@@ -448,7 +665,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
     class SubjectEntryManager extends XNAT.plugin.pixi.abstractBulkEntryManager {
 
         constructor() {
-            super("New Subjects",
+            super("Small Animal Subjects Manager",
                 "Enter subject details",
                 "After selecting a project, define the details of each subject. The 'Subject ID' should be a " +
                 "single word or acronym which will identify your subject and cannot contain spaces or special " +
@@ -542,16 +759,9 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 minRows: 1,
             }
     
-            return super.render(containerId, hotSettings, project, subjects)
+            return super.init(containerId, hotSettings, project, subjects)
                         .then(() => this.initSpeciesSelector())
                         .then(() => this.initVendorSelector())
-                        .then(() => {
-                            if (project !== null && project !== undefined && project !== '') {
-                                this.setProjectSelection(project)
-                                this.disableProjectSelection();
-                            }
-                        })
-                        .then(() => this.populateSubjectSelector())
                         .then(() => this.hot.addHook('beforeChange',
                                                      (changes, source) => this.beforeChange(changes, source)))
                         .then(() => this.hot.addHook('afterValidate',
@@ -579,7 +789,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                             okAction: () => {
                                 let project = self.getProjectSelection();
                                 let subjects = self.hot.getDataAtProp('label').filter(s => s !== null && s !== '');
-                                XNAT.plugin.pixi.pdxEntryManager.init(self.containerId, project, subjects);
+                                XNAT.plugin.pixi.pdxEntryManager.init(self.containerId, null, project, subjects);
                             },
                         })
                     }
@@ -596,7 +806,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                             okAction: () => {
                                 let project = self.getProjectSelection();
                                 let subjects = self.hot.getDataAtProp('label').filter(s => s !== null && s !== '');
-                                XNAT.plugin.pixi.cellLineEntryManager.init(self.containerId, project, subjects);
+                                XNAT.plugin.pixi.cellLineEntryManager.init(self.containerId, null, project, subjects);
                             },
                         })
                     }
@@ -606,48 +816,73 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             return buttons;
         }
     
-        additionalComponents1() {
-            const components = super.additionalComponents1();
+        containerBody() {
+            let containerBody = super.containerBody();
         
-            components.push(
-                spawn('div.subjects-component.form-component.col.containerItem.third', {style: {display: 'none'}}, [
-                    spawn('label|for=\'subjects\'', 'Select Subjects'),
-                    spawn('select.form-control|', {
-                        id:       'subjects',
-                        name:     'subjects',
-                        multiple: true,
-                        onchange: async () => {
-                            let subjectsEl = document.getElementById('subjects');
-                            let selectedSubjects = Array.from(subjectsEl.selectedOptions).map(option => option.text);
-                        
-                            let data = JSON.parse(JSON.stringify(this.hot.getSourceData()));
-                        
-                            // Remove deselected subjects
-                            data = data.filter(row => selectedSubjects.contains(row['label']))
-                        
-                            // Add newly selected subjects
-                            let currentSubjects = data.map(row => row['label']);
-                        
-                            for (const subject of selectedSubjects) {
-                                if (!currentSubjects.contains(subject)) {
-                                    const subjectDetails = await XNAT.plugin.pixi.subjects.get(this.getProjectSelection(),
-                                                                                               subject);
-                                    data.push(subjectDetails);
+            containerBody = [
+                    spawn('div.row', [
+                        spawn('div.form-component.containerItem.half.action.create.active',
+                              {onclick: () => this.toggleAction('create')},
+                              [
+                                  spawn('input.form-control.action.create|type=\'radio\'',
+                                        {
+                                            id:      'createAction',
+                                            name:    'action',
+                                            checked: true,
+                                        }),
+                                  spawn('label|for=\'createAction\'', 'Create New Subjects'),
+                              ]),
+                        spawn('div.form-component.containerItem.half.action.update.disabled',
+                              {onclick: () => this.toggleAction('update')},
+                              [
+                                  spawn('input.form-control.action.update|type=\'radio\'',
+                                        {
+                                            id:   'updateAction',
+                                            name: 'action'
+                                        }),
+                                  spawn('label|for=\'updateAction\'', 'Update Existing Subjects'),
+                              ])
+                    ]),
+                    spawn('hr'),
+                    containerBody[0],
+                    spawn('div.subjects-component.form-component.col.containerItem.third', {style: {display: 'none'}}, [
+                        spawn('label|for=\'subjects\'', 'Select Subjects'),
+                        spawn('select.form-control|', {
+                            id:       'subjects',
+                            name:     'subjects',
+                            multiple: true,
+                            onchange: async () => {
+                                let subjectsEl = document.getElementById('subjects');
+                                let selectedSubjects = Array.from(subjectsEl.selectedOptions).map(option => option.text);
+                            
+                                let data = JSON.parse(JSON.stringify(this.hot.getSourceData()));
+                            
+                                // Remove deselected subjects
+                                data = data.filter(row => selectedSubjects.contains(row['label']))
+                            
+                                // Add newly selected subjects
+                                let currentSubjects = data.map(row => row['label']);
+                            
+                                for (const subject of selectedSubjects) {
+                                    if (!currentSubjects.contains(subject)) {
+                                        const subjectDetails = await XNAT.plugin.pixi.subjects.get(this.getProjectSelection(),
+                                                                                                   subject);
+                                        data.push(subjectDetails);
+                                    }
                                 }
+                            
+                                data = data.sort(XNAT.plugin.pixi.compareGenerator('label'));
+                            
+                                this.updateData(data);
+                                this.updateHeight();
+                            
+                                this.hot.validateCells();
                             }
-                        
-                            data = data.sort(XNAT.plugin.pixi.compareGenerator('label'));
-                        
-                            this.updateData(data);
-                            this.updateHeight();
-                        
-                            this.hot.validateCells();
-                        }
-                    }),
-                ])
-            );
+                        }),
+                    ])
+                ]
         
-            return components;
+            return containerBody;
         }
         
         async populateSubjectSelector() {
@@ -675,39 +910,6 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                                subjectSelectEl.options.add(new Option(subject['label'], subject['id']))
                            });
                        })
-        }
-    
-        actionComponents() {
-            const self = this;
-            
-            const components = super.actionComponents();
-            
-            components.push(
-                spawn('div.row', [
-                    spawn('div.form-component.containerItem.half.action.create.active', {onclick: () => this.toggleAction('create')}, [
-                        spawn('input.form-control.action.create|type=\'radio\'',
-                              {
-                                  id: 'createAction',
-                                  name: 'action',
-                                  checked: true,
-                              }),
-                        spawn('label|for=\'createAction\'', 'Create New Subjects'),
-                    ]),
-                    spawn('div.form-component.containerItem.half.action.update.disabled', {onclick: () => this.toggleAction('update')}, [
-                        spawn('input.form-control.action.update|type=\'radio\'',
-                              {
-                                  id: 'updateAction',
-                                  name: 'action'
-                              }),
-                        spawn('label|for=\'updateAction\'', 'Update Existing Subjects'),
-                    ])
-                ]),
-                spawn('hr'),
-            )
-            
-            // TODO make subject id column read only for editing
-            
-            return components;
         }
         
         toggleAction(action) {
@@ -871,7 +1073,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 return;
             }
 
-            if (this.isEmpty()) {
+            if (this.isHotEmpty()) {
                 console.debug('Nothing to submit.');
                 return;
             }
@@ -958,7 +1160,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
 
                 this.removeKeyboardShortCuts();
                 this.disableProjectSelection();
-
+    
                 if (failedRows.length === 0) {
                     // Success
                     let message = spawn('div', [
@@ -1003,10 +1205,9 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             });
         }
     }
-
+    
     // XNAT.plugin.pixi.abstractBulkEntryManager = AbstractBulkEntryManager;
     XNAT.plugin.pixi.subjectEntryManager = new SubjectEntryManager();
     XNAT.plugin.pixi.cellLineEntryManager = new CellLineEntryManager();
     XNAT.plugin.pixi.pdxEntryManager = new PdxEntryManager();
-
 }));

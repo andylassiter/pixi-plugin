@@ -27,8 +27,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         #title;
         #subtitle;
         #description;
-        
-        projectSelectComponent;
+    
+        projectSelector;
         submitButton;
         
         messageComponent;
@@ -52,26 +52,15 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
         
         async submit() { throw new Error("Method 'submit()' must be implemented."); }
+        async submitRow() { throw new Error("Method 'submitRow()' must be implemented."); }
         
-        async render(containerId, hotSettings) {
+        getXsiType() { throw new Error("Method 'getXsiType()' must be implemented."); }
+        
+        async init(containerId, hotSettings, project, subjects) {
             const self = this;
             
             this.containerId = containerId;
             this.container = document.getElementById(this.containerId);
-    
-            this.projectSelectComponent = spawn('div.form-component.col.containerItem.third', [
-                spawn('label.required|for=\'project\'', 'Select a Project'),
-                spawn('select.form-control', {
-                          id: 'project',
-                          name: 'project',
-                          onchange: () => {
-                              self.validateProjectSelection();
-                              self.populateSubjectSelector().then(() => self.hot.validateCells());
-                          }
-                      },
-                      [spawn('option|', {selected: true, disabled: true, value: ''}, '')]),
-                spawn('div.prj-error', {style: {display: 'none'}}, 'Please select a project')
-            ])
     
             this.messageComponent = spawn('div', {id: 'table-msg', style: {display: 'none'}});
     
@@ -82,12 +71,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 spawn('div.containerBody', [
                     spawn('div.containerItem', self.#description),
                     spawn('hr'),
-                    ...self.actionComponents(),
-                    spawn('div.row', [
-                        self.projectSelectComponent,
-                        ...self.additionalComponents1(),
-                    ]),
-                    ...self.additionalComponents(),
+                    ...self.containerBody(),
                     spawn('div.hot-container.containerIterm', [spawn('div.hot-table')]),
                     self.messageComponent
                 ])
@@ -127,12 +111,39 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                            // Place cursor at first cell
                            this.hot.selectCell(0, 0, 0, 0);
                        })
+                       .then(() => {
+                           if (project !== null && project !== undefined && project !== '') {
+                               this.setProjectSelection(project)
+                               this.disableProjectSelection();
+                           }
+                       })
+                       .then(() => this.populateSubjectSelector());
         }
         
         additionalButtons() { return []; }
-        additionalComponents() { return []; }
-        additionalComponents1() { return []; }
-        actionComponents() { return []; }
+        
+        containerBody() {
+            const self = this;
+            
+            this.projectSelector = spawn('div.form-component.col.containerItem.third', [
+                spawn('label.required|for=\'project\'', 'Select a Project'),
+                spawn('select.form-control', {
+                          id: 'project',
+                          name: 'project',
+                          onchange: () => {
+                              self.validateProjectSelection();
+                              self.populateSubjectSelector().then(() => self.hot.validateCells());
+                              document.dispatchEvent(new Event('project-changed'));
+                          }
+                      },
+                      [spawn('option|', {selected: true, disabled: true, value: ''}, '')]),
+                spawn('div.prj-error', {style: {display: 'none'}}, 'Please select a project')
+            ])
+            
+            return [
+                this.projectSelector
+            ];
+        }
         
         addKeyboardShortCuts() {
             const self = this;
@@ -160,11 +171,11 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                                     });
         }
         
-        getProjectSelection() { return this.projectSelectComponent.getElementsByTagName('select')[0].value; }
-        disableProjectSelection() { this.projectSelectComponent.getElementsByTagName('select')[0].disabled = true; }
+        getProjectSelection() { return this.projectSelector.getElementsByTagName('select')[0].value; }
+        disableProjectSelection() { this.projectSelector.getElementsByTagName('select')[0].disabled = true; }
         
         setProjectSelection(project) {
-            let options = this.projectSelectComponent.getElementsByTagName('option');
+            let options = this.projectSelector.getElementsByTagName('option');
             
             for (let i = 0; i < options.length; i++) {
                 let option = options[i];
@@ -177,12 +188,12 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         
         validateProjectSelection() {
             if (this.getProjectSelection() === '') {
-                this.projectSelectComponent.classList.add('invalid')
-                this.projectSelectComponent.querySelector('.prj-error').style.display = '';
+                this.projectSelector.classList.add('invalid')
+                this.projectSelector.querySelector('.prj-error').style.display = '';
                 return false;
             } else {
-                this.projectSelectComponent.classList.remove('invalid');
-                this.projectSelectComponent.querySelector('.prj-error').style.display = 'none'
+                this.projectSelector.classList.remove('invalid');
+                this.projectSelector.querySelector('.prj-error').style.display = 'none'
                 return true;
             }
         }
@@ -231,7 +242,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
             this.messageComponent.append(message)
         }
         
-        isEmpty() {
+        isHotEmpty() {
             return (this.hot.countEmptyRows() === this.hot.countRows())
         }
         
@@ -290,21 +301,130 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
         }
     
         async init(containerId, hotSettings, project = null, subjects = []) {
-            return super.render(containerId, hotSettings)
+            return super.init(containerId, hotSettings, project, subjects)
                         .then(() => {
                             this.setDateTime();
                             this.setTechnician();
-                            
-                            if (project !== null && project !== undefined && project !== '') {
-                                this.setProjectSelection(project)
-                                this.disableProjectSelection();
-                            }
-                        })
-                        .then(() => this.populateSubjectSelector());
+                        });
         }
     
-        additionalComponents() {
-            const components = super.additionalComponents();
+        async submit() {
+            let validProject = this.validateProjectSelection(),
+                validDate    = this.validateDate(),
+                validTech    = this.validateTechnician(),
+                isEmpty      = this.isHotEmpty();
+        
+            if (!validProject) {
+                return Promise.reject('Invalid project selection');
+            } else if (!validDate) {
+                return Promise.reject('Invalid date');
+            } else if (!validTech) {
+                return Promise.reject('Invalid technician');
+            } else if (isEmpty) {
+                return Promise.reject('Empty');
+            }
+        
+            this.hot.validateCells(async (valid) => {
+                if (!valid) {
+                    let message = spawn('div', [
+                        spawn('p', 'Invalid inputs. Please correct before resubmitting.'),
+                    ])
+                
+                    this.displayMessage('error', message);
+                
+                    return;
+                }
+            
+                // Everything is valid, remove old messages
+                this.clearAndHideMessage();
+            
+                XNAT.ui.dialog.static.wait('Submitting to XNAT', {id: "submit"});
+                
+                let successfulRows = [];
+                let failedRows = [];
+            
+                for (let iRow = 0; iRow < this.hot.countRows(); iRow++) {
+                    await this.submitRow(iRow)
+                              .then(submissionReport => successfulRows.push(submissionReport))
+                              .catch(submissionReport => failedRows.push(submissionReport));
+                }
+            
+                XNAT.ui.dialog.close('submit');
+    
+                document.dispatchEvent(new Event('submit'));
+            
+                // Disable new inputs to successful rows
+                this.hot.updateSettings({
+                                            cells: function (row, col) {
+                                                var cellProperties = {};
+                                                
+                                                if (successfulRows.map(submissionReport => submissionReport['row']).contains(row)) {
+                                                    cellProperties.readOnly = true;
+                                                }
+                    
+                                                return cellProperties;
+                                            },
+                                            contextMenu: ['copy', 'cut'],
+                                        });
+            
+                this.removeKeyboardShortCuts();
+                this.disableProjectSelection();
+            
+                // TODO set experiment IDs after submit
+                // experiments.forEach(experiment => {
+                //     this.hot.setDataAtRowProp(experiment['row'], 'experimentId', experiment['experimentId']);
+                // })
+            
+                if (failedRows.length === 0) {
+                    // Success
+                    let message = spawn('div', [
+                        spawn('p', 'Successful submissions:'),
+                        spawn('ul', successfulRows.map(submissionReport => {
+                            return spawn('li', [
+                                spawn(`a`, {
+                                    href: submissionReport['url'],
+                                    target: '_BLANK'
+                                }, submissionReport['urlText'])
+                            ])
+                        }))
+                    ])
+                
+                    this.displayMessage('success', message);
+                
+                    // Disable resubmissions
+                    this.disableSubmitButton();
+                } else if (successfulRows.length === 0 && failedRows.length > 0) {
+                    // All submissions in error
+                    let message = spawn('div', [
+                        spawn('p', ''),
+                        spawn('p', 'There were errors with your submission. Correct the issues and try resubmitting.'),
+                        spawn('ul', failedRows.map(submissionReport => spawn('li', `Row: ${submissionReport['row'] + 1} ${submissionReport['error']}`))),
+                    ])
+                
+                    this.displayMessage('error', message);
+                } else if (successfulRows.length > 0 && failedRows.length > 0) {
+                    // Some submitted successfully, some failed
+                    let message = spawn('div', [
+                        spawn('p', 'There were errors with your submission. Correct the issues and try resubmitting.'),
+                        spawn('p', 'Error(s):'),
+                        spawn('ul', failedRows.map(submissionReport => spawn('li', `Row: ${submissionReport['row'] + 1} ${submissionReport['error']}`))),
+                        spawn('p', 'Successful submissions:'),
+                        spawn('ul', successfulRows.map(submissionReport => spawn('li', [spawn(`a`, {
+                            href: submissionReport['url'],
+                            target: '_BLANK'
+                        }, submissionReport['urlText'])])))
+                    ])
+                
+                    this.displayMessage('warning', message);
+                }
+            
+                XNAT.ui.dialog.close('submit');
+                
+            })
+        }
+        
+        containerBody() {
+            const containerBody = super.containerBody();
         
             this.dateComponent = spawn('div.form-component.col.containerItem', [
                 spawn('label.required|for=\'date\'', 'Date'),
@@ -332,8 +452,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 }),
                 spawn('div.technician-error', {style: {display: 'none'}}, 'Please enter a technician')
             ]);
-        
-            components.push(
+    
+            containerBody.push(
                 spawn('div.row', [
                     this.dateComponent,
                     this.timeComponent,
@@ -341,7 +461,7 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                 ])
             )
         
-            return components;
+            return containerBody;
         }
     
         getDate() { return this.dateComponent.getElementsByTagName('input')[0].value }
