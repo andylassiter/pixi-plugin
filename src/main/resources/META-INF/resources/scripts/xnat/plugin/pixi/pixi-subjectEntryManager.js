@@ -97,19 +97,21 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
     
         async init(containerId, hotSettings = null, project = null, subjects = []) {
             let initData = [];
-            
+        
             if (subjects.length > 0) {
                 subjects.forEach(subject => {
                     initData.push({
-                                  'subjectId':        subject,
-                                  'experimentId':     '',
-                                  'sourceId':         '',
-                                  'injectionDate':    '',
-                                  'injectionSite':    '',
-                                  'injectionType':    '',
-                                  'numCellsInjected': '',
-                                  'notes':            ''
-                              })
+                                      'subjectId':        subject,
+                                      'experimentId':     '',
+                                      'sourceId':         '',
+                                      'injectionDate':    '',
+                                      'injectionSite':    '',
+                                      'injectionType':    '',
+                                      'numCellsInjected': '',
+                                      'passage':          '',
+                                      'passageMethod':    '',
+                                      'notes':            ''
+                                  })
                 })
             } else {
                 initData = new Array(5).fill(undefined).map(u => ({
@@ -120,6 +122,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                     'injectionSite':    '',
                     'injectionType':    '',
                     'numCellsInjected': '',
+                    'passage':          '',
+                    'passageMethod':    '',
                     'notes':            ''
                 }))
             }
@@ -227,6 +231,8 @@ XNAT.plugin.pixi = pixi = getObject(XNAT.plugin.pixi || {});
                                                 'injectionSite':    data_fields['injectionSite'],
                                                 'injectionType':    data_fields['injectionType'],
                                                 'numCellsInjected': data_fields['numCellsInjected'],
+                                                'passage':          data_fields['passage'],
+                                                'passageMethod':    data_fields['passageMethod'],
                                                 'notes':            data_fields['note']
                                             }
                                             
