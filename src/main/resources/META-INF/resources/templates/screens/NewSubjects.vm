@@ -7,6 +7,8 @@
 
 <script type="text/javascript">
     XNAT.plugin.pixi.subjectEntryManager.init('subject-entry-manager', XNAT.data.context.projectID);
+
+    let pdxExperimentManager;
 </script>
 
 <!-- END pixi-plugin templates/screens/NewSubjects.vm -->

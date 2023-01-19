@@ -9,6 +9,7 @@
 <script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-xenograft.js')"></script>
 <script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-experimentManager.js')"></script>
 <script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-subjectEntryManager.js')"></script>
+<script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-xenograftExperimentManager.js')"></script>
 <script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-caliperMeasurementsManager.js')"></script>
 <script type="text/javascript" src="$content.getURI('scripts/xnat/plugin/pixi/pixi-drugTherapiesManager.js')"></script>
 

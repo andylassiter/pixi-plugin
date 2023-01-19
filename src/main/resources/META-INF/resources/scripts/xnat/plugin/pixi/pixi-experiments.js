@@ -28,34 +28,33 @@ XNAT.plugin.pixi.experiments.drugTherapy = getObject(XNAT.plugin.pixi.experiment
     }
 }(function() {
     
-    XNAT.validate.isEmpty = (value) => value === null || value === undefined || value === '';
-    XNAT.validate.notEmpty = (value) => !XNAT.validate.isEmpty(value);
-
-    XNAT.plugin.pixi.experiments.cellLine.createOrUpdate = async function(projectId, subjectLabel, experimentId,
-                                                                          experimentLabel, cellLine, injectionDate,
-                                                                          injectionSite, injectionType,
-                                                                          numCellsInjected, notes) {
+    XNAT.plugin.pixi.experiments.cellLine.createOrUpdate = async function({
+                                                                              project, subject, experimentId,
+                                                                              experimentLabel, sourceId, date,
+                                                                              injectionSite, injectionType,
+                                                                              numCellsInjected, notes
+                                                                          }) {
         console.debug(`pixi-experiments.js: XNAT.plugin.pixi.experiments.cellLine.createOrUpdate`);
 
         let cellLineExperimentUrl;
 
-        if (experimentId !== null && experimentId !== undefined && experimentId !== '') {
-            cellLineExperimentUrl = XNAT.url.csrfUrl(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments/${experimentId}`);
+        if (experimentId) {
+            cellLineExperimentUrl = XNAT.url.csrfUrl(`/data/projects/${project}/subjects/${subject}/experiments/${experimentId}`);
         } else {
             // If no experiment label, try to create one as SubjectID_CL_##
-            if (experimentLabel === null || experimentLabel === '') {
-                let response = await fetch(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments?xsiType=pixi:cellLineData`, {method: 'GET'});
+            if (!experimentLabel) {
+                let response = await fetch(`/data/projects/${project}/subjects/${subject}/experiments?xsiType=pixi:cellLineData`, {method: 'GET'});
 
                 if (!response.ok) {
-                    throw new Error(`Error fetching cell line experiments for subject ${subjectLabel}: ${response.statusText}`);
+                    throw new Error(`Error fetching cell line experiments for subject ${subject}: ${response.statusText}`);
                 }
 
                 let json = await response.json();
                 let numCellLineExperiments = json['ResultSet']['Result'].length + 1;
-                experimentLabel = `${subjectLabel}_CL_${numCellLineExperiments}`;
+                experimentLabel = `${subject}_CL_${numCellLineExperiments}`;
             }
 
-            cellLineExperimentUrl = XNAT.url.csrfUrl(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments/${experimentLabel}`);
+            cellLineExperimentUrl = XNAT.url.csrfUrl(`/data/projects/${project}/subjects/${subject}/experiments/${experimentLabel}`);
         }
 
         let queryString = []
@@ -69,9 +68,9 @@ XNAT.plugin.pixi.experiments.drugTherapy = getObject(XNAT.plugin.pixi.experiment
 
         addQueryString('xsiType', 'pixi:cellLineData');
 
-        addQueryString('xnat:experimentData/date', injectionDate);
+        addQueryString('xnat:experimentData/date', date);
         addQueryString('xnat:experimentData/note',  notes);
-        addQueryString('pixi:cellLineData/sourceId', cellLine);
+        addQueryString('pixi:cellLineData/sourceId', sourceId);
         addQueryString('pixi:cellLineData/injectionSite', injectionSite);
         addQueryString('pixi:cellLineData/injectionType', injectionType);
         addQueryString('pixi:cellLineData/numCellsInjected', numCellsInjected);
@@ -81,7 +80,7 @@ XNAT.plugin.pixi.experiments.drugTherapy = getObject(XNAT.plugin.pixi.experiment
         let response = await fetch(cellLineExperimentUrl, {method: 'PUT'});
 
         if (!response.ok) {
-            throw new Error(`Error creating cell line experiment ${experimentLabel} for subject ${subjectLabel}: ${response.statusText}`);
+            throw new Error(`Error creating cell line experiment ${experimentLabel} for subject ${subject}: ${response.statusText}`);
         }
 
         return response.text();
@@ -133,31 +132,33 @@ XNAT.plugin.pixi.experiments.drugTherapy = getObject(XNAT.plugin.pixi.experiment
         return XNAT.plugin.pixi.experiments.get(project, subject, experiment, 'pixi:pdxData');
     }
 
-    XNAT.plugin.pixi.experiments.pdx.createOrUpdate = async function(projectId, subjectLabel, experimentId,
-                                                                     experimentLabel, pdx, injectionDate,
-                                                                     injectionSite, injectionType,
-                                                                     numCellsInjected, passage, passageMethod, notes) {
+    XNAT.plugin.pixi.experiments.pdx.createOrUpdate = async function({
+                                                                         project, subject, experimentId,
+                                                                         experimentLabel, sourceId, date,
+                                                                         injectionSite, injectionType, numCellsInjected,
+                                                                         passage, passageMethod, notes
+                                                                     }) {
         console.debug(`pixi-experiments.js: XNAT.plugin.pixi.experiments.pdx.createOrUpdate`);
 
-        let pdxExperimentUrl;
+        let experimentUrl;
 
-        if (experimentId !== null && experimentId !== undefined && experimentId !== '') {
-            pdxExperimentUrl = XNAT.url.csrfUrl(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments/${experimentId}`);
+        if (experimentId) {
+            experimentUrl = XNAT.url.csrfUrl(`/data/projects/${project}/subjects/${subject}/experiments/${experimentId}`);
         } else {
             // If no experiment label, try to create one as SubjectID_PDX_##
-            if (experimentLabel === null || experimentLabel === '') {
-                let response = await fetch(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments?xsiType=pixi:pdxData`, {method: 'GET'});
+            if (!experimentLabel) {
+                let response = await fetch(`/data/projects/${project}/subjects/${subject}/experiments?xsiType=pixi:pdxData`, {method: 'GET'});
 
                 if (!response.ok) {
-                    throw new Error(`Error fetching pdx experiments for subject ${subjectLabel}: ${response.statusText}`);
+                    throw new Error(`Error fetching pdx experiments for subject ${subject}: ${response.statusText}`);
                 }
 
                 let json = await response.json();
                 let numCellLineExperiments = json['ResultSet']['Result'].length + 1;
-                experimentLabel = `${subjectLabel}_PDX_${numCellLineExperiments}`;
+                experimentLabel = `${subject}_PDX_${numCellLineExperiments}`;
             }
 
-            pdxExperimentUrl = XNAT.url.csrfUrl(`/data/projects/${projectId}/subjects/${subjectLabel}/experiments/${experimentLabel}`);
+            experimentUrl = XNAT.url.csrfUrl(`/data/projects/${project}/subjects/${subject}/experiments/${experimentLabel}`);
         }
 
         let queryString = []
@@ -171,21 +172,21 @@ XNAT.plugin.pixi.experiments.drugTherapy = getObject(XNAT.plugin.pixi.experiment
 
         addQueryString('xsiType', 'pixi:pdxData');
 
-        addQueryString('xnat:experimentData/date', injectionDate);
+        addQueryString('xnat:experimentData/date', date);
         addQueryString('xnat:experimentData/note',  notes);
-        addQueryString('pixi:pdxData/sourceId', pdx);
+        addQueryString('pixi:pdxData/sourceId', sourceId);
         addQueryString('pixi:pdxData/injectionSite', injectionSite);
         addQueryString('pixi:pdxData/injectionType', injectionType);
         addQueryString('pixi:pdxData/numCellsInjected', numCellsInjected);
         addQueryString('pixi:pdxData/passage', passage);
         addQueryString('pixi:pdxData/passageMethod', passageMethod);
 
-        pdxExperimentUrl = XNAT.url.addQueryString(pdxExperimentUrl, queryString);
+        experimentUrl = XNAT.url.addQueryString(experimentUrl, queryString);
 
-        let response = await fetch(pdxExperimentUrl, {method: 'PUT'});
+        let response = await fetch(experimentUrl, {method: 'PUT'});
 
         if (!response.ok) {
-            throw new Error(`Error creating pdx experiment ${experimentLabel} for subject ${subjectLabel}: ${response.statusText}`);
+            throw new Error(`Error creating pdx experiment ${experimentLabel} for subject ${subject}: ${response.statusText}`);
         }
 
         return response.text();
