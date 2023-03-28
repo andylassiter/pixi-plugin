@@ -37,6 +37,108 @@
     ["PFDL","Posterior First-Decubitus Left"]
     ])
 
+#set($heatingMethods = [
+    "Air heating pad",
+    "Electric blanket",
+    "Electric heating pad",
+    "Forced air heater",
+    "Forced air warming blanket",
+    "Heated imaging device",
+    "Heated patient support",
+    "Heated water blanket",
+    "Heat lamp",
+    "Non-electric heating pad",
+    "Pre-heated pad",
+    "Unheated",
+    "Warmer device",
+    "Warming blanket"
+])
+
+#set($temperatureSensorDeviceComponents = [
+    "Rectal temperature",
+    "Thermography",
+    "Carrier temperature sensor"
+])
+
+#set($anesthesias = [
+    "Alphachloralose",
+    "Alphadolone",
+    "Alphaxalone",
+    "Azaperone",
+    "Butabarbital",
+    "Chloral hydrate",
+    "Diazepam",
+    "Droperidol",
+    "Etomidate",
+    "Fluanisone",
+    "Ketamine",
+    "Methohexital",
+    "Metomidate",
+    "Midazolam",
+    "Pentobarbital",
+    "Propofol",
+    "Thiamylal",
+    "Thiopental",
+    "Tiletamine",
+    "Tribromoethanol",
+    "Urethane (ethyl carbamate)",
+    "Xylazine",
+    "Zolazepam",
+
+    "Carbon dioxide",
+    "Chloroform",
+    "Desflurane",
+    "Diethyl ether",
+    "Enflurane",
+    "Halothane",
+    "Isoflurane",
+    "Methoxyflurane",
+    "Nitrous oxide",
+    "Sevoflurane",
+
+    "Acepromazine",
+    "Chlorpromazine",
+
+    "Succinylcholine",
+    "Pancuronium",
+
+    "Bupivacaine",
+    "Lidocaine + Prilocaine",
+    "Lidocaine"
+])
+
+#set($routes = [
+    "Intraperitoneal route",
+    "By inhalation",
+    "Intravenous route",
+    "Per rectum",
+    "Intramuscular route"
+])
+
+<datalist id="heatingMethods">
+    #foreach($val in $heatingMethods)
+    <option value="$val">
+    #end
+</datalist>
+
+<datalist id="temperatureSensorDeviceComponents">
+    #foreach($val in $temperatureSensorDeviceComponents)
+    <option value="$val">
+    #end
+</datalist>
+
+<datalist id="anesthesias">
+    #foreach($val in $anesthesias)
+    <option value="$val">
+    #end
+</datalist>
+
+<datalist id="routes">
+    #foreach($val in $routes)
+    <option value="$val">
+    #end
+</datalist>
+
 #macro (pixiTimeBox $name $item $defaultValue $vr)
 <!-- macro: pixiTimeBox -->
     #if ($vr)
@@ -329,6 +431,124 @@
 
                         </div>
 
+                        <hr>
+
+                        <!-- Fasting -->
+                        <div class="panel-element stacked">
+                            <label class="element-label" for="pixi:hotelScanRecord/hotel_subjects/subject[$i]/imageAcquisitionContext/fasting/fastingStatus">
+                                Fasting Status
+                            </label>
+                            <div class="element-wrapper">
+                                <input type="radio" name="pixi:hotelScanRecord/hotel_subjects/subject[$i]/imageAcquisitionContext/fasting/fastingStatus" value="1" #if($item.getProperty("pixi:hotelScanRecord/hotel_subjects/subject[$i]/imageAcquisitionContext/fasting/fastingStatus") == "1") checked #end>Fasted
+                                <input type="radio" name="pixi:hotelScanRecord/hotel_subjects/subject[$i]/imageAcquisitionContext/fasting/fastingStatus" value="0" #if($item.getProperty("pixi:hotelScanRecord/hotel_subjects/subject[$i]/imageAcquisitionContext/fasting/fastingStatus") == "0") checked #end>Not Fasted
+                                <input type="radio" name="pixi:hotelScanRecord/hotel_subjects/subject[$i]/imageAcquisitionContext/fasting/fastingStatus" value="" #if(! $item.getProperty("pixi:hotelScanRecord/hotel_subjects/subject[$i]/imageAcquisitionContext/fasting/fastingStatus")) checked #end>Unknown
+                            </div>
+                        </div>
+                        <div class="panel-element stacked">
+                            <label class="element-label" for="pixi:hotelScanRecord/hotel_subjects/subject[$i]/imageAcquisitionContext/fasting/fastingDuration">
+                                Fasting Duration (hours)
+                            </label>
+                            <div class="element-wrapper">
+                                #xdatTextBox("pixi:hotelScanRecord/hotel_subjects/subject[$i]/imageAcquisitionContext/fasting/fastingDuration" $item "" $vr)
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Heating Conditions -->
+                        #set($heatingConditions = "pixi:hotelScanRecord/hotel_subjects/subject[" + $i + "]/imageAcquisitionContext/heatingConditions[0]/heatingConditions")
+
+                        <div class="panel-element stacked">
+                            <label class="element-label" for="pixi:hotelScanRecord/hotel_subjects/subject[$i]/imageAcquisitionContext/heatingConditions[0]/heatingConditions">
+                                Heating Conditions Procedure Phase
+                            </label>
+                            <div class="element-wrapper">
+                                <select name="$heatingConditions/procedurePhase" value="$item.getProperty("$heatingConditions/procedurePhase")">
+                                    <option value="" #if($item.getProperty("$heatingConditions/procedurePhase") == "") selected #end></option>
+                                    <option value="Preoperative" #if($item.getProperty("$heatingConditions/procedurePhase") == "Preoperative") selected #end>Preoperative</option>
+                                    <option value="Intraoperative" #if($item.getProperty("$heatingConditions/procedurePhase") == "Intraoperative") selected #end>Intraoperative</option>
+                                    <option value="Postoperative" #if($item.getProperty("$heatingConditions/procedurePhase") == "Postoperative") selected #end>Postoperative</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="panel-element stacked">
+                            <label class="element-label" for="$heatingConditions/heatingMethod">
+                                Heating Method
+                            </label>
+                            <div class="element-wrapper">
+                                <input list="heatingMethods"
+                                       class="form-control"
+                                       id="$heatingConditions/heatingMethod"
+                                       name="$heatingConditions/heatingMethod"
+                                       value="$!item.getProperty("$heatingConditions/heatingMethod")">
+                            </div>
+                        </div>
+
+                        <div class="panel-element stacked">
+                            <label class="element-label" for="$heatingConditions/feedbackTemperatureRegulation">
+                                Feedback Temperature Regulation
+                            </label>
+                            <div class="element-wrapper">
+                                <input type="radio" name="$heatingConditions/feedbackTemperatureRegulation" value="1" #if($item.getProperty("$heatingConditions/feedbackTemperatureRegulation") == "1") checked #end>Yes
+                                <input type="radio" name="$heatingConditions/feedbackTemperatureRegulation" value="0" #if($item.getProperty("$heatingConditions/feedbackTemperatureRegulation") == "0") checked #end>No
+                                <input type="radio" name="$heatingConditions/feedbackTemperatureRegulation" value="" #if(! $item.getProperty("$heatingConditions/feedbackTemperatureRegulation")) checked #end>N/A
+                            </div>
+                        </div>
+
+                        <div class="panel-element stacked">
+                            <label class="element-label" for="$heatingConditions/temperatureSensorDeviceComponent">
+                                Temperature Sensor Device Component
+                            </label>
+                            <div class="element-wrapper">
+                                <input list="temperatureSensorDeviceComponents"
+                                       id="$heatingConditions/temperatureSensorDeviceComponent"
+                                       name="$heatingConditions/temperatureSensorDeviceComponent"
+                                       value="$!item.getProperty("$heatingConditions/temperatureSensorDeviceComponent")">
+                            </div>
+                        </div>
+
+                        <div class="panel-element stacked">
+                            <label class="element-label" for="$heatingConditions/animalTemperature">
+                                Animal Temperature (&#8451;)
+                            </label>
+                            <div class="element-wrapper">
+                                #xdatTextBox("$heatingConditions/animalTemperature" $item "" $vr)
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Anesthesia -->
+                        #set($anesthesias = "pixi:hotelScanRecord/hotel_subjects/subject[" + $i + "]/imageAcquisitionContext/anesthesias[0]/anesthesia")
+
+                        <div class="panel-element stacked">
+                            <label class="element-label" for="$anesthesias/anesthesia">
+                                Anesthesia Used
+                            </label>
+                            <div class="element-wrapper">
+                                <input list="anesthesias"
+                                       id="$anesthesias/anesthesia"
+                                       name="$anesthesias/anesthesia"
+                                       value="$!item.getProperty("$anesthesias/anesthesia")">
+                            </div>
+                        </div>
+
+                        <div class="panel-element stacked">
+                            <label class="element-label" for="$anesthesias/routeOfAdministration">
+                                Route of Administration
+                            </label>
+                            <div class="element-wrapper">
+                                <input list="routes"
+                                       id="$anesthesias/routeOfAdministration"
+                                       name="$anesthesias/routeOfAdministration"
+                                       value="$!item.getProperty("$anesthesias/routeOfAdministration")">
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Notes -->
                         <div class="panel-element stacked">
                             <label class="element-label" for="pixi:hotelScanRecord/hotel_subjects/subject[$i]/notes">
                                 Notes
@@ -388,6 +608,28 @@
     XNAT.plugin.pixi.setLabel("$presetSessionLabel")
 </script>
 #end
+
+<script>
+    const numSubjects = $subjects.size();
+
+    const toggleFastingStatus = (i) => {
+        const fastingStatus = document.querySelector(`input[name="pixi:hotelScanRecord/hotel_subjects/subject[${i}]/imageAcquisitionContext/fasting/fastingStatus"]:checked`).value;
+        const fastingDuration = document.querySelector(`input[name="pixi:hotelScanRecord/hotel_subjects/subject[${i}]/imageAcquisitionContext/fasting/fastingDuration"]`);
+        if (fastingStatus === "1") {
+            fastingDuration.disabled = false;
+        } else {
+            fastingDuration.disabled = true;
+            fastingDuration.value = "";
+        }
+    }
+
+    for (let i = 0; i < numSubjects; i++) {
+        toggleFastingStatus(i);
+        document.querySelectorAll(`input[name="pixi:hotelScanRecord/hotel_subjects/subject[${i}]/imageAcquisitionContext/fasting/fastingStatus"]`).forEach((el) => {
+            el.addEventListener("change", () => toggleFastingStatus(i))
+        });
+    }
+</script>
 
 <script type="text/javascript">
 	function validateForm()
