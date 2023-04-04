@@ -133,6 +133,15 @@ console.log('pixi-editScanRecord.js');
                 ])
             ]);
             
+            const splitSessionLabelEl = XNAT.ui.panel.input({
+                className: 'stacked',
+                name: 'pixi:hotelScanRecord/hotel_subjects/subject[' + i + ']/split_session_label',
+                label: 'Split Session Label',
+                description: 'Specify the split image session label for this subject'
+            });
+            
+            splitSessionLabelEl.style.display = 'none';
+            
             return spawn('div.column', [
                 spawn('div.panel.panel-default.hotel-unit', [
                     spawn('div.panel-body', [
@@ -209,6 +218,7 @@ console.log('pixi-editScanRecord.js');
                         anesthesiasEl,
                         routeOfAdministrationEl,
                         spawn('hr'),
+                        splitSessionLabelEl,
                         XNAT.ui.panel.textarea({
                             className: 'stacked',
                             name: 'pixi:hotelScanRecord/hotel_subjects/subject[' + i + ']/notes',

@@ -560,6 +560,16 @@
                                     >$!item.getProperty("pixi:hotelScanRecord/hotel_subjects/subject[$i]/notes")</textarea>
                             </div>
                         </div>
+
+                        <!-- Split Session Label -->
+                        <div class="panel-element stacked" style="display: none">
+                            <label class="element-label" for="pixi:hotelScanRecord/hotel_subjects/subject[$i]/split_session_label">
+                                Split Session Label
+                            </label>
+                            <div class="element-wrapper">
+                                #xdatTextBox("pixi:hotelScanRecord/hotel_subjects/subject[$i]/split_session_label" $item "" $vr)
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
