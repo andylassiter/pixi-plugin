@@ -125,8 +125,8 @@
     <DisplayField id="TEMPERATURESENSORDEVICECOMPONENT" header="Temperature Sensor Device Component" visible="true" searchable="true">
         <DisplayFieldElement name="Field1" schema-element="pixi:imageAcquisitionContextAssessorData/imageAcquisitionContext/heatingConditions[0]/heatingConditions/temperatureSensorDeviceComponent"/>
     </DisplayField>
-    <DisplayField id="ANIMALTEMPERATURE" header="Animal Temperature" visible="true" searchable="true">
-        <DisplayFieldElement name="Field1" schema-element="pixi:imageAcquisitionContextAssessorData/imageAcquisitionContext/heatingConditions[0]/heatingConditions/animalTemperature"/>
+    <DisplayField id="SETPOINTEMPERATURE" header="Setpoint Temperature" visible="true" searchable="true">
+        <DisplayFieldElement name="Field1" schema-element="pixi:imageAcquisitionContextAssessorData/imageAcquisitionContext/heatingConditions[0]/heatingConditions/setpointTemperature"/>
     </DisplayField>
 
     <DisplayField id="ANESTHESIA" header="Anesthesia Used" visible="true" searchable="true">
@@ -166,7 +166,7 @@
         <DisplayFieldRef id="HEATINGMETHOD"/>
         <DisplayFieldRef id="FEEDBACKTEMPERATUREREGULATION"/>
         <DisplayFieldRef id="TEMPERATURESENSORDEVICECOMPONENT"/>
-        <DisplayFieldRef id="ANIMALTEMPERATURE"/>
+        <DisplayFieldRef id="SETPOINTTEMPERATURE"/>
         <DisplayFieldRef id="ANESTHESIA"/>
         <DisplayFieldRef id="ROUTEOFADMINISTRATION"/>
     </DisplayVersion>

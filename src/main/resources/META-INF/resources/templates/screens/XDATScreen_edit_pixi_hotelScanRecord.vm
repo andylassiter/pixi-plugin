@@ -509,11 +509,11 @@
                         </div>
 
                         <div class="panel-element stacked">
-                            <label class="element-label" for="$heatingConditions/animalTemperature">
-                                Animal Temperature (&#8451;)
+                            <label class="element-label" for="$heatingConditions/setpointTemperature">
+                                Setpoint Temperature (&#8451;)
                             </label>
                             <div class="element-wrapper">
-                                #xdatTextBox("$heatingConditions/animalTemperature" $item "" $vr)
+                                #xdatTextBox("$heatingConditions/setpointTemperature" $item "" $vr)
                             </div>
                         </div>
 

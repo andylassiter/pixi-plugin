@@ -445,9 +445,9 @@
                         <xs:documentation>Device used to measure temperature (e.g. 'rectal temperature', 'thermography', 'carrier temperature sensor').</xs:documentation>
                     </xs:annotation>
                 </xs:element>
-                <xs:element name="animalTemperature" type="xs:decimal" minOccurs="0">
+                <xs:element name="setpointTemperature" type="xs:decimal" minOccurs="0">
                     <xs:annotation>
-                        <xs:documentation>Temperature (in Celsius) of the animal during the procedure.</xs:documentation>
+                        <xs:documentation>Sensor temperature setpoint, in degrees Celsius.</xs:documentation>
                     </xs:annotation>
                 </xs:element>
             </xs:sequence>

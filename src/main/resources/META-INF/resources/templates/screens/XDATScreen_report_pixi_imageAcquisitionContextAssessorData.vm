@@ -82,8 +82,8 @@ $page.setVlinkColor($ui.vlink)
 								<TD>$!item.getProperty("$heatingConditions/temperatureSensorDeviceComponent")</TD>
 							</TR>
 							<TR>
-								<TD>Animal Temperature</TD>
-								<TD>$!item.getProperty("$heatingConditions/animalTemperature") #if($item.getProperty("$heatingConditions/animalTemperature"))&#8451;#end</TD>
+								<TD>Setpoint Temperature</TD>
+								<TD>$!item.getProperty("$heatingConditions/setpointTemperature") #if($item.getProperty("$heatingConditions/setpointTemperature"))&#8451;#end</TD>
 							</TR>
 							<TR><TD style="height: 1rem"></TD><TD></TD></TR>
 

@@ -105,11 +105,11 @@ console.log('pixi-editScanRecord.js');
                 ])
             ])
             
-            const animalTemperatureEl = XNAT.ui.panel.input({
+            const setpointTemperatureEl = XNAT.ui.panel.input({
                 className: 'stacked',
-                name: 'pixi:hotelScanRecord/hotel_subjects/subject[' + i + ']/imageAcquisitionContext/heatingConditions[0]/heatingConditions/animalTemperature',
-                label: 'Animal Temperature (&#8451;)',
-                description: 'Specify the animal temperature in degrees Celsius'
+                name: 'pixi:hotelScanRecord/hotel_subjects/subject[' + i + ']/imageAcquisitionContext/heatingConditions[0]/heatingConditions/setpointTemperature',
+                label: 'Setpoint Temperature (&#8451;)',
+                description: 'Sensor temperature setpoint, in degrees Celsius'
             });
             
             const anesthesiasEl = spawn('div.panel-element.stacked', [
@@ -203,7 +203,7 @@ console.log('pixi-editScanRecord.js');
                         heatingMethodEl,
                         feedbackTemperatureRegulationEl,
                         temperatureSensorDeviceComponent,
-                        animalTemperatureEl,
+                        setpointTemperatureEl,
                         spawn('hr'),
                         anesthesiasEl,
                         routeOfAdministrationEl,

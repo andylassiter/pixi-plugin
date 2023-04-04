@@ -226,8 +226,8 @@ $page.setVlinkColor($ui.vlink)
 								</TD>
 							</TR>
 							<TR>
-								<TD>Animal Temperature (&#8451;)</TD>
-								<TD>#xdatStringBoxOnChange("$heatingConditions/animalTemperature" $item "" "" $vr "form-control")</TD>
+								<TD>Setpoint Temperature (&#8451;)</TD>
+								<TD>#xdatStringBoxOnChange("$heatingConditions/setpointTemperature" $item "" "" $vr "form-control")</TD>
 							</TR>
 							<TR><TD style="height: 2rem"></TD><TD></TD></TR>
 							<!-- Anesthesia -->

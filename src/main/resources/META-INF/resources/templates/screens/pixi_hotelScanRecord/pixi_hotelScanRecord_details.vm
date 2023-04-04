@@ -202,8 +202,8 @@
                             <td>$!subject.getProperty("$heatingConditions/temperatureSensorDeviceComponent")</td>
                         </tr>
                         <tr>
-                            <th>Animal Temperature</th>
-                            <td>$!subject.getProperty("$heatingConditions/animalTemperature") #if($!subject.getProperty("$heatingConditions/animalTemperature"))&#8451;#end</td>
+                            <th>Setpoint Temperature</th>
+                            <td>$!subject.getProperty("$heatingConditions/setpointTemperature") #if($!subject.getProperty("$heatingConditions/setpointTemperature"))&#8451;#end</td>
                         </tr>
                         <tr>
                             <td colspan="2"><hr style="margin: 0"></td>
