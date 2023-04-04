@@ -65,12 +65,13 @@ console.log('pixi-editScanRecord.js');
                 label: 'Heating Conditions Procedure Phase',
                 description: 'Specify the procedure phase for the applied heating conditions',
                 options: {
-                    '': '(SELECT)',
-                    'Preoperative': 'Preoperative',
                     'Intraoperative': 'Intraoperative',
+                    'Preoperative': 'Preoperative',
                     'Postoperative': 'Postoperative'
                 }
             });
+            
+            heatingConditionsProcedurePhaseEl.style.display = 'none';
             
             const heatingMethodEl = spawn('div.panel-element.stacked', [
                 spawn('label.element-label|for=\'pixi:hotelScanRecord/hotel_subjects/subject[' + i + ']/imageAcquisitionContext/heatingConditions[0]/heatingConditions/heatingMethod\'', 'Heating Method'),

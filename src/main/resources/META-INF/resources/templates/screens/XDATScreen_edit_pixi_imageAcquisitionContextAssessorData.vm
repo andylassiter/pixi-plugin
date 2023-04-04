@@ -180,14 +180,14 @@ $page.setVlinkColor($ui.vlink)
 							<!-- Heating Conditions -->
 							#set($heatingConditions = "pixi:imageAcquisitionContextAssessorData/imageAcquisitionContext/heatingConditions[0]/heatingConditions")
 							<TR><TH align="left" style="padding: 0">Heating Conditions</TH></TR>
-							<TR>
+							<TR style="display: none;">
 								<TD>Procedure Phase</TD>
 								<TD>
 									<select class="form-control" name="$heatingConditions/procedurePhase" value="$item.getProperty("$heatingConditions/procedurePhase")">
-										<option value="" #if($item.getProperty("$heatingConditions/procedurePhase") == "") selected #end></option>
-										<option value="Preoperative" #if($item.getProperty("$heatingConditions/procedurePhase") == "Preoperative") selected #end>Preoperative</option>
 										<option value="Intraoperative" #if($item.getProperty("$heatingConditions/procedurePhase") == "Intraoperative") selected #end>Intraoperative</option>
+										<option value="Preoperative" #if($item.getProperty("$heatingConditions/procedurePhase") == "Preoperative") selected #end>Preoperative</option>
 										<option value="Postoperative" #if($item.getProperty("$heatingConditions/procedurePhase") == "Postoperative") selected #end>Postoperative</option>
+										<option value="" #if($item.getProperty("$heatingConditions/procedurePhase") == "") selected #end></option>
 									</select>
 								</TD>
 							</TR>

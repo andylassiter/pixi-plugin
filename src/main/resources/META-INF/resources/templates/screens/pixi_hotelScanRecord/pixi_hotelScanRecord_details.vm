@@ -179,7 +179,7 @@
                             <td colspan="2"><hr style="margin: 0"></td>
                         </tr>
                         #set($heatingConditions = "imageAcquisitionContext/heatingConditions[0]/heatingConditions")
-                        <tr>
+                        <tr style="display: none">
                             <th>Heating Conditions Procedure Phase</th>
                             <TD>$!subject.getProperty("$heatingConditions/procedurePhase")</TD>
                         </tr>

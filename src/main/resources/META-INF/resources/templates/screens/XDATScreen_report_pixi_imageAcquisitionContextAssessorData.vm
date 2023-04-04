@@ -56,7 +56,7 @@ $page.setVlinkColor($ui.vlink)
 							<!-- Heating Conditions -->
 							#set($heatingConditions = "pixi:imageAcquisitionContextAssessorData/imageAcquisitionContext/heatingConditions[0]/heatingConditions")
 							<TR><TH align="left" style="padding: 0">Heating Conditions</TH></TR>
-							<TR>
+							<TR style="display: none">
 								<TD>Procedure Phase</TD>
 								<TD>$!item.getProperty("$heatingConditions/procedurePhase")</TD>
 							</TR>
