@@ -44,6 +44,7 @@ public class XFTHotelScanRecordService implements HotelScanRecordService {
         List<PixiHotelsubjectI> hotelSubjects = hotelScanRecord.getHotelSubjects_subject();
 
         PixiHotelsubjectI hotelSubject =  hotelSubjects.stream()
+                                                       .filter(subject -> subject.getSubjectId() != null)
                                                        .filter(subject -> subject.getSubjectId().equals(subjectId))
                                                        .findFirst().orElseThrow(() -> new NotFoundException(PixiHotelsubject.SCHEMA_ELEMENT_NAME, subjectId));
 
