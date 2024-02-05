@@ -68,7 +68,6 @@ try {
     branchName = gitDetails.branchName ?: "Unknown"
     gitHash = gitDetails.gitHash
     gitHashFull = gitDetails.gitHashFull
-    commitDistance = gitDetails.commitDistance
     lastTag = gitDetails.lastTag
     isCleanTag = gitDetails.isCleanTag
 } catch (IllegalArgumentException ignored) {
@@ -77,7 +76,6 @@ try {
     branchName = "Unknown"
     gitHash = "None"
     gitHashFull = "None"
-    commitDistance = 0
     lastTag = "None"
     isCleanTag = false
 }
@@ -87,7 +85,6 @@ logger.info "Build-Number:            ${buildNumber}"
 logger.info "Implementation-Version:  ${version}"
 logger.info "Implementation-Sha-Full: ${gitHashFull}"
 logger.info "Implementation-Sha:      ${gitHash}"
-logger.info "Implementation-Commit:   ${commitDistance}"
 logger.info "Implementation-LastTag:  ${lastTag}"
 logger.info "Implementation-Branch:   ${branchName}"
 logger.info "Implementation-CleanTag: ${isCleanTag}"
@@ -100,7 +97,6 @@ ext.gitManifest = manifest {
             "Implementation-Version": project.version,
             "Implementation-Sha": gitHash,
             "Implementation-Sha-Full": gitHashFull,
-            "Implementation-Commit": commitDistance,
             "Implementation-LastTag": lastTag,
             "Implementation-Branch": branchName,
             "Implementation-CleanTag": isCleanTag,
