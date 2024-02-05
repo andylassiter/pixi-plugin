@@ -60,7 +60,7 @@ test {
 // Pulls in the Jenkins BUILD_NUMBER environment variable if available.
 def buildDate = new Date()
 def buildNumber = System.getenv().BUILD_NUMBER?.toInteger() ?: "Manual"
-def isDirty, branchName, gitHash, gitHashFull, commitDistance, lastTag, isCleanTag
+def isDirty, branchName, gitHash, gitHashFull
 
 try {
     def gitDetails = versionDetails()
@@ -68,16 +68,12 @@ try {
     branchName = gitDetails.branchName ?: "Unknown"
     gitHash = gitDetails.gitHash
     gitHashFull = gitDetails.gitHashFull
-    lastTag = gitDetails.lastTag
-    isCleanTag = gitDetails.isCleanTag
 } catch (IllegalArgumentException ignored) {
     logger.info "Got an error trying to read VCS metadata from git. It's possible this project is not under VCS control. Using placeholder values for manifest entries."
     isDirty = true
     branchName = "Unknown"
     gitHash = "None"
     gitHashFull = "None"
-    lastTag = "None"
-    isCleanTag = false
 }
 
 logger.info "Build-Date:              ${buildDate}"
@@ -85,9 +81,7 @@ logger.info "Build-Number:            ${buildNumber}"
 logger.info "Implementation-Version:  ${version}"
 logger.info "Implementation-Sha-Full: ${gitHashFull}"
 logger.info "Implementation-Sha:      ${gitHash}"
-logger.info "Implementation-LastTag:  ${lastTag}"
 logger.info "Implementation-Branch:   ${branchName}"
-logger.info "Implementation-CleanTag: ${isCleanTag}"
 logger.info "Implementation-Dirty:    ${isDirty}"
 
 ext.gitManifest = manifest {
@@ -97,9 +91,7 @@ ext.gitManifest = manifest {
             "Implementation-Version": project.version,
             "Implementation-Sha": gitHash,
             "Implementation-Sha-Full": gitHashFull,
-            "Implementation-LastTag": lastTag,
             "Implementation-Branch": branchName,
-            "Implementation-CleanTag": isCleanTag,
             "Implementation-Dirty": isDirty
 }
 
