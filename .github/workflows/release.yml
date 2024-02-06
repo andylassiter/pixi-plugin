@@ -2,13 +2,12 @@ name: Release
 
 on:
   push:
-    branches:
-        - releases/v*
+    tags:
+        - 'v*.*.*'
 
 jobs:
-  release-candidate:
 
-    if: startsWith(github.ref, 'refs/tags/v') && (contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha'))
+  release:
 
     runs-on: ubuntu-latest
 
@@ -37,5 +36,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: build/libs/*.jar
-          prerelease: true
-
+          prerelease: contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha')
