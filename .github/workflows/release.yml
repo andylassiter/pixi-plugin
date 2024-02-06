@@ -32,10 +32,20 @@ jobs:
       - name: Build JAR with Gradle Wrapper
         run: ./gradlew clean jar
 
-      - name: Upload Release
+      - name: Upload Release Candidate JAR
+        if: contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha')
         uses: softprops/action-gh-release@v1
         with:
           files: build/libs/*.jar
-          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
+          prerelease: true
           body: |
-            Release ${{ github.ref_name }}
+            This is a pre-release version of the plugin. The plugin JAR is attached to this release. Please test and report any issues.
+
+      - name: Upload Release JAR
+        if: !contains(github.ref, '-rc') && !contains(github.ref, '-beta') && !contains(github.ref, '-alpha')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/libs/*.jar
+          prerelease: false
+          body: |
+            Release version ${{ github.ref_name }}. The plugin JAR is attached to this release.
