@@ -37,3 +37,5 @@ jobs:
         with:
           files: build/libs/*.jar
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
+          body: |
+            Release ${{ github.ref_name }}
