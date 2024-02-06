@@ -38,3 +38,4 @@ jobs:
         with:
           files: build/libs/*.jar
           prerelease: true
+
