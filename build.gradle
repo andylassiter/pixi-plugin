@@ -57,42 +57,57 @@ test {
     useJUnit()
 }
 
-// Pulls in the Jenkins BUILD_NUMBER environment variable if available.
 def buildDate = new Date()
-def buildNumber = System.getenv().BUILD_NUMBER?.toInteger() ?: "Manual"
-def isDirty, branchName, gitHash, gitHashFull
+// Pulls in GitHub Actions environment variables if available.
+def github_actor = System.getenv().GITHUB_ACTOR ?: "Unknown"
+def github_repo = System.getenv().GITHUB_REPOSITORY ?: "Unknown"
+def github_sha = System.getenv().GITHUB_SHA ?: "Unknown"
+def github_ref = System.getenv().GITHUB_REF ?: "Unknown"
 
-try {
-    def gitDetails = versionDetails()
-    isDirty = gitVersion().endsWith ".dirty"
-    branchName = gitDetails.branchName ?: "Unknown"
-    gitHash = gitDetails.gitHash
-    gitHashFull = gitDetails.gitHashFull
-} catch (IllegalArgumentException ignored) {
-    logger.info "Got an error trying to read VCS metadata from git. It's possible this project is not under VCS control. Using placeholder values for manifest entries."
-    isDirty = true
-    branchName = "Unknown"
-    gitHash = "None"
-    gitHashFull = "None"
-}
-
-logger.info "Build-Date:              ${buildDate}"
-logger.info "Build-Number:            ${buildNumber}"
-logger.info "Implementation-Version:  ${version}"
-logger.info "Implementation-Sha-Full: ${gitHashFull}"
-logger.info "Implementation-Sha:      ${gitHash}"
-logger.info "Implementation-Branch:   ${branchName}"
-logger.info "Implementation-Dirty:    ${isDirty}"
+//// Pulls in the Jenkins BUILD_NUMBER environment variable if available.
+//def buildNumber = System.getenv().BUILD_NUMBER?.toInteger() ?: "Manual"
+//def isDirty, branchName, gitHash, gitHashFull
+//
+//try {
+//    def gitDetails = versionDetails()
+//    isDirty = gitVersion().endsWith ".dirty"
+//    branchName = gitDetails.branchName ?: "Unknown"
+//    gitHash = gitDetails.gitHash
+//    gitHashFull = gitDetails.gitHashFull
+//} catch (Exception ignored) {
+//    logger.info "Got an error trying to read VCS metadata from git. It's possible this project is not under VCS control. Using placeholder values for manifest entries."
+//    isDirty = true
+//    branchName = "Unknown"
+//    gitHash = "None"
+//    gitHashFull = "None"
+//}
+//
+//logger.info "Build-Date:              ${buildDate}"
+//logger.info "Build-Number:            ${buildNumber}"
+//logger.info "Implementation-Version:  ${version}"
+//logger.info "Implementation-Sha-Full: ${gitHashFull}"
+//logger.info "Implementation-Sha:      ${gitHash}"
+//logger.info "Implementation-Branch:   ${branchName}"
+//logger.info "Implementation-Dirty:    ${isDirty}"
+//
+//ext.gitManifest = manifest {
+//    attributes "Application-Name": "PIXI-PLUGIN",
+//            "Build-Date": buildDate,
+//            "Build-Number": buildNumber,
+//            "Implementation-Version": project.version,
+//            "Implementation-Sha": gitHash,
+//            "Implementation-Sha-Full": gitHashFull,
+//            "Implementation-Branch": branchName,
+//            "Implementation-Dirty": isDirty
+//}
 
 ext.gitManifest = manifest {
     attributes "Application-Name": "PIXI-PLUGIN",
             "Build-Date": buildDate,
-            "Build-Number": buildNumber,
-            "Implementation-Version": project.version,
-            "Implementation-Sha": gitHash,
-            "Implementation-Sha-Full": gitHashFull,
-            "Implementation-Branch": branchName,
-            "Implementation-Dirty": isDirty
+            "GITHUB-ACTOR": github_actor,
+            "GITHUB-REPO": github_repo,
+            "GITHUB-SHA": github_sha,
+            "GITHUB-REF": github_ref
 }
 
 // Configure the compileJava task to call the xnatDataBuilder task before trying to compile any
