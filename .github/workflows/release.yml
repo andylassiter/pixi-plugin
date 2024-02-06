@@ -46,4 +46,4 @@ jobs:
         with:
           files: build/libs/*.jar
           prerelease: false
-          body: Release version ${{ github.ref_name }}. The plugin JAR is attached to this release.
+          body: The plugin JAR is attached to this release.
