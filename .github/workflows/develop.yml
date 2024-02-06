@@ -1,9 +1,8 @@
-name: Build Develop Branch
+name: Develop
 
 on:
   push:
     branches:
-        - test
         - develop
 
 jobs:
